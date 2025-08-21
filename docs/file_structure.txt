@@ -16,24 +16,22 @@ the_board/
 ├── file_structure.txt
 ├── generate_file_structure.py
 ├── main.py
-├── new
+├── new/
 ├── poetry.lock
 ├── pyproject.toml
-├── scripts
+├── scripts/
 │   ├── __init__.py
 │   ├── dev.py
 │   └── start.py
-├── src
+├── src/
 │   ├── __init__.py
-│   ├── api
+│   ├── api/
 │   │   ├── __init__.py
 │   │   └── state_routes.py
 │   ├── main.py
-│   └── state
+│   └── state/
 │       ├── __init__.py
 │       └── store.py
 ├── start.sh
-└── state
-    ├── the_board_state.db
-    ├── the_board_state.db-shm
-    └── the_board_state.db-wal
+└── state/
+    └── the_board_state.db

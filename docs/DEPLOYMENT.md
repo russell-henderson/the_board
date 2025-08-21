@@ -29,7 +29,7 @@
 
 ## 3) Project layout (expected)
 
-```
+```bash
 
 the_board/
 ├── .env
@@ -49,27 +49,26 @@ the_board/
 ├── file_structure.txt
 ├── generate_file_structure.py
 ├── main.py
-├── new
+├── new/
 ├── poetry.lock
 ├── pyproject.toml
-├── scripts
+├── scripts/
 │   ├── __init__.py
 │   ├── dev.py
 │   └── start.py
-├── src
+├── src/
 │   ├── __init__.py
-│   ├── api
+│   ├── api/
 │   │   ├── __init__.py
 │   │   └── state_routes.py
 │   ├── main.py
-│   └── state
+│   └── state/
 │       ├── __init__.py
 │       └── store.py
 ├── start.sh
-└── state
-    ├── the_board_state.db
-    ├── the_board_state.db-shm
-    └── the_board_state.db-wal
+└── state/
+    └── the_board_state.db
+
 ```
 
 ---
@@ -78,7 +77,7 @@ the_board/
 
 Create `C:\Users\forlu\Desktop\_the_board\the_board\.env`:
 
-```
+```bash
 # LLM server
 OLLAMA_BASE_URL=http://localhost:11434
 
@@ -210,13 +209,13 @@ def echo(body: EchoIn):
 
 Open two terminals.
 
-**Terminal A — Ollama**
+## Terminal A — Ollama
 
 ```powershell
 ollama serve
 ```
 
-**Terminal B — API**
+## Terminal B — API
 
 ```powershell
 cd C:\Users\forlu\Desktop\_the_board\the_board
@@ -397,4 +396,4 @@ nssm restart the_board
 
 ---
 
-**End of DEPLOYMENT.md**
+## **End of DEPLOYMENT.md**

@@ -23,12 +23,21 @@ Imagine having access to a full C-suite team (CEO, CFO, CTO, CMO, COO, and 15 ot
 
 ### **🤖 Multi-Agent Intelligence**
 
+**Essential Five (Core Agents):**
+
 - **Odyssey (CEO)** - Master orchestrator and goal decomposer
 - **Momentum (COO)** - Execution and operational excellence
 - **Abacus (CFO)** - Financial modeling and budget optimization
 - **Nexus (CTO)** - Technical architecture and tool evaluation
 - **Muse (CMO)** - Marketing strategy and brand positioning
-- **And 15 more specialized agents...**
+
+**Additional Specialists:**
+
+- **Curio (Chief Researcher)** - Knowledge base maintenance and research
+- **Guardian (CISO)** - Security, compliance, and risk oversight
+- **Pulse (CHRO)** - Organizational design and team dynamics
+- **Insight (CIO)** - Data strategy and analytics
+- **And 10 more specialized agents...**
 
 ### **🔒 Privacy & Control**
 
@@ -47,24 +56,28 @@ Imagine having access to a full C-suite team (CEO, CFO, CTO, CMO, COO, and 15 ot
 
 ## 🏗️ **Architecture Overview**
 
+**Pattern:** Multi-Agent Orchestration with Centralized Knowledge (Hub-and-Spoke)
+
+```mermaid
+flowchart TD
+    U(User) -->|Query| F(FastAPI Backend)
+    F -->|Delegates| CEO[CEO Agent: Odyssey]
+    CEO -->|Task Assignment| A1[Specialist Agents: CFO, CTO, CMO, COO...]
+    A1 -->|Knowledge Retrieval| KB[(ChromaDB Vector Store)]
+    A1 -->|Optional Tools| Ext[External APIs/Integrations]
+    A1 --> CEO
+    CEO --> Synth[Synthesis & Validation]
+    Synth -->|Final Response| U
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   User Query   │───▶│  FastAPI Backend │───▶│  Odyssey (CEO)  │
-│                │    │  (src/main.py)   │    │                 │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                │                        │
-                                ▼                        ▼
-                       ┌──────────────────┐    ┌─────────────────┐
-                       │   State Store    │    │ Specialist      │
-                       │   (SQLite)       │    │ Agents          │
-                       └──────────────────┘    └─────────────────┘
-                                │                        │
-                                ▼                        ▼
-                       ┌──────────────────┐    ┌─────────────────┐
-                       │   ChromaDB       │    │  Synthesis      │
-                       │  (Knowledge)     │    │   Engine        │
-                       └──────────────────┘    └─────────────────┘
-```
+
+### **Core Components**
+
+- **FastAPI Backend** - Entry point (`src/main.py`) with Pydantic v2 contracts
+- **Orchestration Engine** - CEO Agent routes tasks and manages execution
+- **Specialist Agents** - 20 specialized executives with distinct expertise
+- **Knowledge Layer** - ChromaDB vector store with configurable embeddings
+- **State Layer** - SQLite persistence with WAL mode for reliability
+- **Synthesis Layer** - Conflict resolution and branded output formatting
 
 ## 🚀 **Quick Start**
 
@@ -74,7 +87,7 @@ Imagine having access to a full C-suite team (CEO, CFO, CTO, CMO, COO, and 15 ot
 - [Ollama](https://ollama.ai/) installed and running
 - Poetry (for dependency management)
 
-### **Installation**
+### **Installation & Setup**
 
 1. **Clone the repository**
 
@@ -100,23 +113,26 @@ Imagine having access to a full C-suite team (CEO, CFO, CTO, CMO, COO, and 15 ot
 
    ```bash
    ollama serve
-   ollama pull llama3.1:8b
-   ollama pull mxbai-embed-large:335m
+   ollama pull llama3.2
+   ollama pull mxbai-embed-large
    ```
 
 5. **Launch the system**
 
    **Development mode (with auto-reload):**
+
    ```bash
    poetry run dev
    ```
 
    **Production mode:**
+
    ```bash
    poetry run start
    ```
 
    **Direct launch (canonical entry point):**
+
    ```bash
    poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000
    ```
@@ -142,9 +158,102 @@ curl -X POST "http://localhost:8000/echo" \
 curl "http://localhost:8000/readyz"
 ```
 
+### **Strategic Planning (Future Implementation)**
+
+```bash
+# Submit a strategic goal (when implemented)
+curl -X POST "http://localhost:8000/plan" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "high_level_goal": "Launch a SaaS product for small business accounting",
+    "user_context": "I have 2 years of accounting experience and $50k budget"
+  }'
+```
+
 ### **Interactive API Documentation**
 
 Visit `http://localhost:8000/docs` for the full interactive API reference.
+
+## 🏛️ **Knowledge Layer**
+
+The knowledge layer is powered by **ChromaDB**, a local vector database that stores:
+
+- **Document Embeddings** - Vector representations of ingested content
+- **Provenance Tracking** - Source, timestamp, and metadata for all knowledge
+- **Semantic Search** - Intelligent retrieval based on query similarity
+- **Citation Management** - Trackable references for all insights
+
+**Configuration:**
+
+```bash
+# ChromaDB persistence
+CHROMA_PERSIST_DIRECTORY=./chroma_db
+
+# Embedding model
+EMBEDDING_MODEL=mxbai-embed-large
+```
+
+## 🗄️ **State Layer**
+
+The state layer provides persistent storage and workflow management:
+
+- **SQLite Database** - WAL mode for concurrent access and reliability
+- **Task Management** - Track agent assignments, status, and dependencies
+- **Execution History** - Complete audit trail of all operations
+- **User Context** - Persistent storage of user preferences and history
+
+## **Configuration:**
+
+```bash
+# State persistence
+STATE_BACKEND=sqlite
+STATE_DB_PATH=./state/the_board_state.db
+```
+
+## 🔌 **API Endpoints**
+
+### **Core Endpoints**
+
+- `GET /` - Health check and status
+- `GET /health` - Health check endpoint
+- `GET /healthz` - Alternative health check
+- `GET /readyz` - Ready check with dependency validation
+- `POST /echo` - Echo endpoint for testing
+
+### **Future Strategic Endpoints**
+
+- `POST /plan` - Submit strategic goals for analysis
+- `GET /state/plans/{plan_id}` - Retrieve plan details
+- `GET /state/plans/{plan_id}/events` - View execution history
+- `POST /state/tasks/{task_id}/retry` - Retry failed tasks
+- `POST /state/tasks/{task_id}/cancel` - Cancel running tasks
+
+### **Data Models**
+
+- **OdysseyGoalRequest** - User goal submission with context
+- **AgentTask** - Individual task information and status
+- **AgentResponse** - Structured output from specialist agents
+- **FinalPlan** - Synthesized strategy with confidence scoring
+- **ErrorReport** - Structured error reporting for escalations
+- **UserCorrection** - Feedback loop for continuous improvement
+
+## 🎨 **Branded Output Structure**
+
+All system outputs follow a consistent, professional structure:
+
+### **Strategic Reports Include:**
+
+- **📊 Findings** - Key insights from agent analysis
+- **⚠️ Risks** - Identified challenges and mitigation strategies
+- **🚀 Opportunities** - Potential advantages and growth areas
+- **💡 Recommendations** - Actionable next steps and priorities
+- **📚 References** - Citations and source materials
+
+### **Confidence Scoring:**
+
+- **High Confidence (≥0.80)** - "high confidence"
+- **Moderate Confidence (0.50-0.79)** - "moderate confidence"
+- **Low Confidence (<0.50)** - "uncertain; human review advised"
 
 ## ⚙️ **Configuration**
 
@@ -157,43 +266,61 @@ STATE_DB_PATH=./state/the_board_state.db # SQLite database path
 CHROMA_PERSIST_DIRECTORY=./chroma_db    # Knowledge base storage
 
 # LLM Configuration
-PRIMARY_LLM=llama3.1:8b                # Main reasoning model
-EMBEDDING_MODEL=mxbai-embed-large:335m  # Vector embedding model
-OLLAMA_BASE_URL=http://localhost:11434  # Ollama service URL
+PRIMARY_LLM=llama3.2                   # Main reasoning model
+EMBEDDING_MODEL=mxbai-embed-large      # Vector embedding model
+OLLAMA_BASE_URL=http://localhost:11434 # Ollama service URL
 
 # Performance Tuning
 OLLAMA_NUM_CTX=4096                    # Context window size
 OLLAMA_NUM_PARALLEL=2                  # Parallel requests
 OLLAMA_NUM_THREADS=6                   # CPU threads
+
+# API Configuration
+API_PORT=8000                          # FastAPI server port
+LOG_LEVEL=INFO                         # Logging verbosity
 ```
 
 ### **Model Selection**
 
-- **Reasoning Models**: `llama3.1:8b`, `mistral:7b`, `codellama:7b`
-- **Embedding Models**: `mxbai-embed-large:335m`, `nomic-embed-text`
+- **Reasoning Models**: `llama3.2`, `llama3.1:8b`, `mistral:7b`, `codellama:7b`
+- **Embedding Models**: `mxbai-embed-large`, `nomic-embed-text`
 - **Performance vs. Quality**: Smaller models for faster responses, larger for better reasoning
 
 ## 🧪 **Development**
 
 ### **Project Structure**
 
-```
+```bash
 the_board/
-├── src/                    # Main application code
-│   ├── main.py            # 🎯 CANONICAL ENTRY POINT - FastAPI app
-│   ├── api/               # API routes and endpoints
-│   │   └── state_routes.py # State management endpoints
-│   └── state/             # State management and persistence
-│       └── store.py       # SQLite state store implementation
-├── scripts/                # Utility scripts
-│   ├── dev.py             # Development server launcher
-│   └── start.py           # Production server launcher
-├── docs/                   # Documentation
-├── state/                  # SQLite database storage
-├── logs/                   # Application logs
-├── start.sh               # Production startup script
-├── dev.sh                 # Development startup script
-└── pyproject.toml         # Project configuration
+├── .env
+├── .gitignore
+├── README.md
+├── dataModel.py                        # 🎯 Core data contracts
+├── dev.sh
+├── docs/                               # 📚 Comprehensive documentation
+│   ├── BRAND_GUIDELINES.md            # Brand identity and voice
+│   ├── DEPLOYMENT.md                  # Production deployment guide
+│   ├── PROJECT_OVERVIEW.md            # High-level project overview
+│   ├── TECHSPEC.md                    # Technical architecture
+│   ├── WORKFLOWS.md                   # Operational procedures
+│   ├── brand_board.png                # Visual brand assets
+│   └── file_structure.txt             # File organization
+├── example.env
+├── main.py                            # Legacy entry point
+├── poetry.lock
+├── pyproject.toml                     # Project configuration
+├── scripts/                           # Utility scripts
+│   ├── dev.py                        # Development server launcher
+│   └── start.py                      # Production server launcher
+├── src/                               # Main application code
+│   ├── main.py                       # 🎯 CANONICAL ENTRY POINT
+│   ├── api/                          # API routes and endpoints
+│   │   └── state_routes.py          # State management endpoints
+│   └── state/                        # State management and persistence
+│       └── store.py                  # SQLite state store implementation
+├── start.sh                          # Production startup script
+└── state/                            # SQLite database storage
+    └── the_board_state.db
 ```
 
 ### **Development Commands**
@@ -227,21 +354,15 @@ poetry run mypy src/
 - **`start.sh`** - Production startup script
 - **`dev.sh`** - Development startup script
 
-## 🔧 **API Reference**
+## 📚 **Documentation Reference**
 
-### **Core Endpoints**
+For comprehensive details on specific aspects of the system:
 
-- `GET /` - Health check and status
-- `GET /health` - Health check endpoint
-- `GET /healthz` - Alternative health check
-- `GET /readyz` - Ready check with dependency validation
-- `POST /echo` - Echo endpoint for testing
-
-### **Data Models**
-
-- **Health** - Health check response model
-- **EchoIn** - Echo input model
-- **EchoOut** - Echo output model with model information
+- **[Technical Specification](docs/TECHSPEC.md)** - Complete system architecture, data models, and technical details
+- **[Workflows](docs/WORKFLOWS.md)** - Operational procedures, state management, and agent interactions
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment, Windows services, and troubleshooting
+- **[Brand Guidelines](docs/BRAND_GUIDELINES.md)** - Visual identity, voice, and output formatting standards
+- **[Project Overview](docs/PROJECT_OVERVIEW.md)** - High-level project goals and roadmap
 
 ## 📊 **Performance & Scaling**
 
@@ -262,7 +383,7 @@ poetry run mypy src/
 
 ### **Common Issues**
 
-**Ollama Connection Failed**
+## **Ollama Connection Failed**
 
 ```bash
 # Check if Ollama is running
@@ -272,7 +393,7 @@ ollama list
 ollama serve
 ```
 
-**Out of Memory**
+## **Out of Memory**
 
 ```bash
 # Reduce context window
@@ -282,7 +403,7 @@ export OLLAMA_NUM_CTX=2048
 export PRIMARY_LLM=mistral:7b
 ```
 
-**Database Errors**
+## **Database Errors**
 
 ```bash
 # Reset state database
@@ -356,4 +477,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **the_board** - Where strategic intelligence meets local privacy. 🚀
 
-*Built with ❤️ for the open-source community*
+### *Built with ❤️ for the open-source community*
