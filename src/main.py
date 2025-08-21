@@ -8,6 +8,7 @@ from typing import Optional
 from fastapi import HTTPException
 from fastapi import FastAPI
 from pydantic import BaseModel
+from src.api.state_routes import router as state_router
 
 # Load .env (minimal loader to avoid extra deps)
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -39,6 +40,7 @@ class EchoOut(BaseModel):
     model: Optional[str] = os.environ.get("PRIMARY_LLM")
 
 app = FastAPI(title="the_board API", version="0.1.0")
+app.include_router(state_router)
 
 # SQLite state with WAL
 STATE_DB_PATH = os.environ.get("STATE_DB_PATH", "./state/the_board_state.db")
