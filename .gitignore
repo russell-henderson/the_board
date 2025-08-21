@@ -1,0 +1,514 @@
+# =============================================================================
+# the_board .gitignore
+# =============================================================================
+# This file ensures sensitive information, local configurations, and generated
+# content are not accidentally committed to version control.
+
+# =============================================================================
+# Environment & Configuration Files
+# =============================================================================
+
+# Environment variables (contains API keys, database credentials, etc.)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+.env.*.local
+
+# Configuration files with sensitive data
+config/local.json
+config/secrets.json
+config/credentials.json
+config/database.json
+config/api_keys.json
+
+# =============================================================================
+# Database & State Files
+# =============================================================================
+
+# SQLite databases (contain user data and system state)
+*.db
+*.sqlite
+*.sqlite3
+state/*.db
+state/*.sqlite
+state/*.sqlite3
+state/the_board_state.db
+state/the_board_state.db-shm
+state/the_board_state.db-wal
+
+# ChromaDB data directory (knowledge base)
+chroma_db/
+chroma_db/*
+.chroma/
+
+# Redis dump files (if using Redis backend)
+*.rdb
+*.aof
+
+# PostgreSQL data (if using PostgreSQL backend)
+postgres_data/
+
+# =============================================================================
+# Logs & Debug Files
+# =============================================================================
+
+# Application logs
+logs/
+logs/*
+*.log
+*.log.*
+the_board.out.log
+the_board.err.log
+the_board.out-*.log
+the_board.err-*.log
+
+# Debug and crash logs
+debug.log
+crash.log
+error.log
+access.log
+
+# System logs
+syslog
+messages
+
+# =============================================================================
+# AI Models & Large Files
+# =============================================================================
+
+# Downloaded AI models
+models/
+models/*
+*.gguf
+*.bin
+*.safetensors
+*.ckpt
+*.pth
+
+# Ollama model cache
+.ollama/
+ollama_cache/
+
+# Hugging Face cache
+.cache/huggingface/
+.cache/torch/
+.cache/transformers/
+
+# =============================================================================
+# Python & Development
+# =============================================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# =============================================================================
+# IDE & Editor Files
+# =============================================================================
+
+# VSCode
+.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# =============================================================================
+# OS & System Files
+# =============================================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.tmp
+*.temp
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =============================================================================
+# Security & Secrets
+# =============================================================================
+
+# Private keys and certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+*.p7b
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+id_ecdsa
+id_ecdsa.pub
+id_dsa
+id_dsa.pub
+
+# GPG keys
+*.gpg
+*.asc
+.gnupg/
+
+# Passwords and secrets
+passwords.txt
+secrets.txt
+*.secret
+.secret
+
+# =============================================================================
+# Temporary & Cache Files
+# =============================================================================
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Cache directories
+.cache/
+cache/
+tmp/
+temp/
+
+# =============================================================================
+# Project-Specific Exclusions
+# =============================================================================
+
+# Agent-specific data and configurations
+agents/local_config/
+agents/personal_data/
+agents/custom_prompts/
+
+# User-specific knowledge base additions
+knowledge/user_uploads/
+knowledge/personal_documents/
+knowledge/custom_sources/
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.orig
+
+# =============================================================================
+# Monitoring & Analytics
+# =============================================================================
+
+# Application metrics
+metrics/
+analytics/
+stats/
+
+# Health check files
+health_check.log
+status.json
+
+# =============================================================================
+# Documentation Build Artifacts
+# =============================================================================
+
+# Built documentation
+docs/build/
+docs/_build/
+site/
+
+# Generated API docs
+api_docs/
+swagger/
+
+# =============================================================================
+# Docker & Containerization
+# =============================================================================
+
+# Docker files (if using containers)
+Dockerfile.local
+docker-compose.override.yml
+.dockerignore
+
+# Container data
+container_data/
+docker_data/
+
+# =============================================================================
+# Backup & Archive Files
+# =============================================================================
+
+# Archive files
+*.tar
+*.tar.gz
+*.tar.bz2
+*.zip
+*.rar
+*.7z
+
+# Backup archives
+backup/
+backups/
+*.backup.*
+
+# =============================================================================
+# Testing & Quality Assurance
+# =============================================================================
+
+# Test data
+test_data/
+test_files/
+test_output/
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+
+# Performance profiling
+*.prof
+*.profile
+
+# =============================================================================
+# Local Development Overrides
+# =============================================================================
+
+# Local development overrides
+local_*
+dev_*
+development_*
+
+# User-specific configurations
+user_config/
+personal_config/
+
+# =============================================================================
+# Keep Important Project Files
+# =============================================================================
+# These files should ALWAYS be committed:
+
+# !example.env          # Template for environment setup
+# !README.md           # Project documentation
+# !pyproject.toml      # Project configuration
+# !docs/**            # Documentation files
+# !src/**             # Source code
+# !scripts/**         # Utility scripts
+# !.github/**         # GitHub workflows and templates
+# !LICENSE            # License file
+# !CONTRIBUTING.md    # Contribution guidelines
+# !CHANGELOG.md       # Version history
+# !CODE_OF_CONDUCT.md # Community guidelines
+
+# =============================================================================
+# Notes
+# =============================================================================
+# 
+# This .gitignore is designed to protect:
+# 1. Sensitive configuration data (.env files)
+# 2. Local databases and state files
+# 3. Downloaded AI models and caches
+# 4. User-specific data and customizations
+# 5. Log files and debug information
+# 6. IDE and editor-specific files
+# 7. OS-generated files
+# 8. Temporary and cache files
+#
+# Always review what you're committing to ensure no sensitive
+# information is exposed in your repository.
