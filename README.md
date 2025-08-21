@@ -306,6 +306,12 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment instructions
 - **[Brand Guidelines](docs/BRAND_GUIDELINES.md)** - Visual identity and messaging
 
+## 🖼️ Brand Guidelines
+
+See the full brand standards in [docs/BRAND_GUIDELINES.md](docs/BRAND_GUIDELINES.md).
+
+![Brand Board](docs/brand_board.png)
+
 ## 📄 **License**
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
