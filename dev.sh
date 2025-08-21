@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Ensure ENVFILE default (so src/main.py picks it up)
+export ENVFILE="${ENVFILE:-$(pwd)/.env}"
+
 # ---- Config ----
 APP_MODULE="src/main.py"         # FastAPI entry
 HOST="127.0.0.1"

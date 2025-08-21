@@ -28,6 +28,6 @@
 │
 ├── dev.sh                       # Development startup script
 ├── start.sh                     # Optional production entry script
-├── example.env                   # Example environment variables
+├── .env                         # Environment variables
 ├── README.md                     # Quickstart + project overview
 └── pyproject.toml                # Poetry dependencies
