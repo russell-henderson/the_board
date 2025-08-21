@@ -50,6 +50,7 @@ Imagine having access to a full C-suite team (CEO, CFO, CTO, CMO, COO, and 15 ot
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   User Query   │───▶│  FastAPI Backend │───▶│  Odyssey (CEO)  │
+│                │    │  (src/main.py)   │    │                 │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
                                 │                        │
                                 ▼                        ▼
@@ -105,34 +106,40 @@ Imagine having access to a full C-suite team (CEO, CFO, CTO, CMO, COO, and 15 ot
 
 5. **Launch the system**
 
+   **Development mode (with auto-reload):**
+   ```bash
+   poetry run dev
+   ```
+
+   **Production mode:**
    ```bash
    poetry run start
    ```
 
+   **Direct launch (canonical entry point):**
+   ```bash
+   poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000
+   ```
+
 The system will be available at `http://localhost:8000`
+
+**Note:** The canonical entry point is `src/main.py` - this is the main FastAPI application that contains the core API endpoints and state management.
 
 ## 📖 **Usage Examples**
 
-### **Basic Strategic Planning**
+### **Basic API Endpoints**
 
 ```bash
-# Submit a strategic goal
-curl -X POST "http://localhost:8000/plan" \
+# Health check
+curl "http://localhost:8000/health"
+
+# Echo endpoint (demo)
+curl -X POST "http://localhost:8000/echo" \
   -H "Content-Type: application/json" \
-  -d '{
-    "high_level_goal": "Launch a SaaS product for small business accounting",
-    "user_context": "I have 2 years of accounting experience and $50k budget"
-  }'
-```
+  -d '{"text": "Hello, the_board!"}'
 
-### **Monitor Progress**
-
-```bash
-# Check plan status
-curl "http://localhost:8000/state/plans/{plan_id}"
-
-# View execution events
-curl "http://localhost:8000/state/plans/{plan_id}/events"
+# Ready check (with dependency validation)
+curl "http://localhost:8000/readyz"
 ```
 
 ### **Interactive API Documentation**
@@ -173,21 +180,33 @@ OLLAMA_NUM_THREADS=6                   # CPU threads
 ```
 the_board/
 ├── src/                    # Main application code
-│   ├── api/               # FastAPI routes and endpoints
-│   ├── state/             # State management and persistence
-│   └── main.py            # Application entry point
+│   ├── main.py            # 🎯 CANONICAL ENTRY POINT - FastAPI app
+│   ├── api/               # API routes and endpoints
+│   │   └── state_routes.py # State management endpoints
+│   └── state/             # State management and persistence
+│       └── store.py       # SQLite state store implementation
 ├── scripts/                # Utility scripts
+│   ├── dev.py             # Development server launcher
+│   └── start.py           # Production server launcher
 ├── docs/                   # Documentation
 ├── state/                  # SQLite database storage
 ├── logs/                   # Application logs
+├── start.sh               # Production startup script
+├── dev.sh                 # Development startup script
 └── pyproject.toml         # Project configuration
 ```
 
 ### **Development Commands**
 
 ```bash
-# Start development server
+# Start development server (auto-reload)
 poetry run dev
+
+# Start production server
+poetry run start
+
+# Direct launch of canonical entry point
+poetry run uvicorn src.main:app --reload --host 127.0.0.1 --port 8000
 
 # Run tests
 poetry run pytest
@@ -200,32 +219,29 @@ poetry run isort src/
 poetry run mypy src/
 ```
 
-### **Adding New Agents**
+### **Entry Points**
 
-1. Create agent class in `src/agents/`
-2. Define I/O schemas using Pydantic
-3. Configure role-specific parameters
-4. Add to orchestration logic
-5. Update documentation
+- **`src/main.py`** - 🎯 **CANONICAL ENTRY POINT** - Main FastAPI application
+- **`poetry run dev`** - Development server with auto-reload
+- **`poetry run start`** - Production server
+- **`start.sh`** - Production startup script
+- **`dev.sh`** - Development startup script
 
 ## 🔧 **API Reference**
 
 ### **Core Endpoints**
 
 - `GET /` - Health check and status
-- `POST /plan` - Submit strategic goals
-- `GET /state/plans/{plan_id}` - Retrieve plan details
-- `GET /state/plans/{plan_id}/events` - View execution history
-- `POST /state/tasks/{task_id}/retry` - Retry failed tasks
-- `POST /state/tasks/{task_id}/cancel` - Cancel running tasks
+- `GET /health` - Health check endpoint
+- `GET /healthz` - Alternative health check
+- `GET /readyz` - Ready check with dependency validation
+- `POST /echo` - Echo endpoint for testing
 
 ### **Data Models**
 
-- **OdysseyGoalRequest** - User goal submission
-- **PlanRecord** - Plan metadata and status
-- **TaskRecord** - Individual task information
-- **AgentResponseRecord** - Agent output and confidence
-- **EventRecord** - System event logging
+- **Health** - Health check response model
+- **EchoIn** - Echo input model
+- **EchoOut** - Echo output model with model information
 
 ## 📊 **Performance & Scaling**
 
