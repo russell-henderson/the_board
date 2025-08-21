@@ -220,7 +220,7 @@ from state_manager import state_store, TaskState
 from agents.ceo_agent import ceo
 from synthesis import synthesis
 
-MAX_ATTEMPTS = 3
+MAX_ATTEMPTS = 2
 
 def run_user_goal(user_goal: str) -> SynthesizedOutput:
     store = state_store()
@@ -321,7 +321,7 @@ Event kinds:
 
 ### 12.1 Inspect a Plan
 
-GET /api/state/plans/{plan_id}
+GET /state/plans/{plan_id}
 
 ## Response
 
@@ -350,7 +350,7 @@ GET /api/state/plans/{plan_id}
 
 ### 12.2 List Events
 
-GET /api/state/plans/{plan_id}/events?task_id={task_id}&limit=200
+GET /state/plans/{plan_id}/events?task_id={task_id}&limit=200
 
 ## Response to api
 

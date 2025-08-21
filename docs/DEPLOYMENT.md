@@ -31,39 +31,45 @@
 
 ```
 
-/the_board
-├── src/                         # Application source code
-│   ├── __init__.py
-│   ├── main.py                  # FastAPI entrypoint
-│   ├── agents/                  # Agent definitions
-│   │   ├── __init__.py
-│   │   ├── base_agent.py
-│   │   ├── ceo_agent.py
-│   │   ├── cfo_agent.py
-│   │   └── ... other agents
-│   ├── knowledge/               # Knowledge base / RAG layer
-│   │   ├── __init__.py
-│   │   └── vector_store.py
-│   ├── config/                  # Configuration files
-│   │   └── agents.json
-│   └── models/                  # Data models
-│       ├── __init__.py
-│       └── dataModel.py
-│
-├── docs/                        # Project documentation
+the_board/
+├── .env
+├── .gitignore
+├── README.md
+├── dataModel.py
+├── dev.sh
+├── docs
 │   ├── BRAND_GUIDELINES.md
-│   ├── WORKFLOWS.md
-│   ├── TECHSPEC.md
 │   ├── DEPLOYMENT.md
 │   ├── PROJECT_OVERVIEW.md
-│   ├── file_structure.txt
-│   └── brand_board.png
-│
-├── dev.sh                       # Development startup script
-├── start.sh                     # Optional production entry script
-├── example.env                   # Example environment variables
-├── README.md                     # Quickstart + project overview
-└── pyproject.toml        
+│   ├── TECHSPEC.md
+│   ├── WORKFLOWS.md
+│   ├── brand_board.png
+│   └── file_structure.txt
+├── example.env
+├── file_structure.txt
+├── generate_file_structure.py
+├── main.py
+├── new
+├── poetry.lock
+├── pyproject.toml
+├── scripts
+│   ├── __init__.py
+│   ├── dev.py
+│   └── start.py
+├── src
+│   ├── __init__.py
+│   ├── api
+│   │   ├── __init__.py
+│   │   └── state_routes.py
+│   ├── main.py
+│   └── state
+│       ├── __init__.py
+│       └── store.py
+├── start.sh
+└── state
+    ├── the_board_state.db
+    ├── the_board_state.db-shm
+    └── the_board_state.db-wal
 ```
 
 ---
@@ -214,7 +220,7 @@ ollama serve
 
 ```powershell
 cd C:\Users\forlu\Desktop\_the_board\the_board
-poetry run uvicorn main:app --reload --host 0.0.0.0 --port 8080
+poetry run uvicorn src.main:app --reload --host 0.0.0.0 --port 8080
 ```
 
 Verify:
