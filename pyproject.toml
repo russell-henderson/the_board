@@ -7,7 +7,7 @@ name = "the-board"
 version = "0.1.0"
 description = "Multi-agent orchestration system (FastAPI + Ollama + ChromaDB) with a SQLite-backed state layer."
 readme = "README.md"
-requires-python = ">=3.11,<3.12"
+requires-python = ">=3.11,<3.13"
 license = { text = "MIT" }
 authors = [{ name = "Russell Henderson", email = "you@example.com" }]
 
