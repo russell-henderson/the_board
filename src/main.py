@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -36,7 +36,7 @@ def load_env_file(path: str) -> None:
 
 load_env_file(ENVFILE)
 
-# Allow importing dataModel.py from repo root
+# Allow importing from the models package
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -45,12 +45,13 @@ if str(REPO_ROOT) not in sys.path:
 # to small inline versions that satisfy the API contracts.
 # =============================================================
 try:  # project-defined models (preferred)
-    from dataModel import (  # type: ignore
+    from src.models.odyssey.core import OdysseyGoalRequest
+    from src.models.dataModel import (
         AgentType,
         AgentResponse,
-        OdysseyGoalRequest,
         FinalPlan,
     )
+    from src.orchestration.runner import run_plan
 except Exception:
 
     class AgentType(str):  # very small fallback for docs
@@ -66,10 +67,8 @@ except Exception:
         confidence: float = 0.8
         citations: List[str] = []
 
-    class OdysseyGoalRequest(BaseModel):
-        high_level_goal: str = Field(...,
-                                     description="User goal or query to pursue")
-        user_context: Optional[Dict[str, Any]] = None
+    # OdysseyGoalRequest is now imported from src.models.odyssey.core
+    pass
 
     class FinalPlan(BaseModel):
         plan_id: str
@@ -250,10 +249,13 @@ MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "2"))
 ESSENTIAL_FIVE = ["COO", "CFO", "CTO", "CMO"]  # CEO is the orchestrator
 
 
-@app.post("/plan", response_model=FinalPlan, tags=["plan"])
-def create_and_run_plan(req: OdysseyGoalRequest) -> FinalPlan:
-    """Create a plan, seed minimal tasks, and return a synthesized shell.
-    This is a thin walking skeleton. Real agent execution is wired later.
+@app.post("/plan", status_code=202, tags=["plan"])
+def create_and_run_plan(
+    req: OdysseyGoalRequest,
+    background_tasks: BackgroundTasks
+):
+    """Accepts a strategic goal, creates a plan, and starts the
+    orchestration in the background.
     """
     plan_id = f"plan_{uuid.uuid4().hex[:12]}"
     created = utc_now()
@@ -288,16 +290,14 @@ def create_and_run_plan(req: OdysseyGoalRequest) -> FinalPlan:
             )
         conn.commit()
 
-    # Synthesis shell, branded sections can be filled after agents run
-    synthesized = _bootstrap_synth(req.high_level_goal)
-
-    return FinalPlan(
-        plan_id=plan_id,
-        synthesized_strategy=synthesized,
-        contributing_agents=["CEO", *ESSENTIAL_FIVE],
-        identified_risks=["Execution risk if dependencies are not clarified"],
-        confidence_score=0.75,
-    )
+    # Instead of returning a FinalPlan, start the background task
+    background_tasks.add_task(run_plan, plan_id)
+    
+    # Return an immediate response so the user isn't waiting
+    return {
+        "message": "Plan accepted and orchestration started.",
+        "plan_id": plan_id
+    }
 
 
 def _default_task_description(agent: str, goal: str) -> str:
