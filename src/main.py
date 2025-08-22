@@ -189,7 +189,41 @@ if not logger.handlers:
 # =============================================================
 # FastAPI app
 # =============================================================
-app = FastAPI(title="the_board API", version="1.0.0")
+app = FastAPI(
+    title="the_board API", 
+    version="2.0.0",
+    description="""
+    🎯 **the_board** - Multi-Agent Strategic Planning System
+    
+    A sophisticated orchestration platform that leverages specialized AI agents 
+    to provide comprehensive strategic analysis and planning.
+    
+    ## Features
+    
+    * **Multi-Agent Analysis**: CFO, CTO, CMO, and COO agents provide specialized insights
+    * **Task Orchestration**: Intelligent task management and execution
+    * **State Management**: Persistent tracking of plans and task execution
+    * **Real-time Monitoring**: Health checks and status reporting
+    
+    ## Getting Started
+    
+    1. Create a strategic plan using `POST /plan`
+    2. Monitor progress with `GET /state/plans/{plan_id}`
+    3. Retrieve comprehensive analysis and recommendations
+    
+    ## Health Checks
+    
+    * `/health` - Basic service health
+    * `/readyz` - Service readiness (includes database connectivity)
+    """,
+    contact={
+        "name": "the_board Support",
+        "url": "https://github.com/russell-henderson/the_board",
+    },
+    license_info={
+        "name": "MIT",
+    },
+)
 
 
 # -------------------------------------------------------------

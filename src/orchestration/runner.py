@@ -6,8 +6,8 @@ managing the workflow from task assignment to completion.
 """
 
 import sqlite3
-from agents.specialists import agent_registry
-from models.dataModel import AgentType, TaskStatus
+from ..agents.specialists import agent_registry
+from ..models.dataModel import AgentType, TaskStatus
 
 
 def run_plan(plan_id: str):
