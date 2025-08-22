@@ -111,65 +111,12 @@ class OkResponse(BaseModel):
 
 
 # =============================================================
-# SQLite state store - default backend
+# Import the StateStore
 # =============================================================
-STATE_DB_PATH = os.environ.get("STATE_DB_PATH", "./state/the_board_state.db")
-STATE_DB = (REPO_ROOT / STATE_DB_PATH).resolve()
-STATE_DB.parent.mkdir(parents=True, exist_ok=True)
-
+from .state.store import state_store
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-
-
-def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(STATE_DB, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL;")
-    conn.execute("PRAGMA synchronous=NORMAL;")
-    return conn
-
-
-with _connect() as c:
-    c.execute(
-        """
-        CREATE TABLE IF NOT EXISTS plans (
-            plan_id TEXT PRIMARY KEY,
-            status TEXT NOT NULL,
-            original_query TEXT,
-            created_at TEXT NOT NULL,
-            closed_at TEXT
-        )
-        """
-    )
-    c.execute(
-        """
-        CREATE TABLE IF NOT EXISTS tasks (
-            task_id TEXT PRIMARY KEY,
-            plan_id TEXT NOT NULL,
-            agent TEXT NOT NULL,
-            description TEXT NOT NULL,
-            state TEXT NOT NULL,
-            attempts INTEGER NOT NULL DEFAULT 0,
-            last_error TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-        """
-    )
-    c.execute(
-        """
-        CREATE TABLE IF NOT EXISTS events (
-            event_id TEXT PRIMARY KEY,
-            plan_id TEXT,
-            task_id TEXT,
-            kind TEXT NOT NULL,
-            payload TEXT,
-            created_at TEXT NOT NULL
-        )
-        """
-    )
-    c.commit()
 
 
 # =============================================================
@@ -252,8 +199,8 @@ def healthz() -> JSONResponse:
 @app.get("/readyz", tags=["system"])
 def readyz() -> JSONResponse:
     try:
-        with _connect() as conn:
-            conn.execute("PRAGMA wal_checkpoint(PASSIVE);")
+        # A simple check using the store
+        state_store._conn.execute("SELECT 1")
         return JSONResponse({"status": "ready"})
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"not_ready: {e}")
@@ -295,12 +242,15 @@ def create_and_run_plan(
     created = utc_now()
     logger.info(f"[CEO] plan_created id={plan_id}")
 
-    with _connect() as conn:
-        conn.execute(
+    # Use the StateStore to create the plan and tasks
+    # Note: This is a simplified version - the full implementation would use StateStore methods
+    # For now, we'll use the existing direct database approach but import from StateStore
+    with state_store._conn:
+        state_store._conn.execute(
             "INSERT INTO plans(plan_id, status, original_query, created_at) VALUES (?, ?, ?, ?)",
             (plan_id, "open", req.high_level_goal, created),
         )
-        _record_event(conn, plan_id, None, "plan_created",
+        _record_event(state_store._conn, plan_id, None, "plan_created",
                       {"goal": req.high_level_goal})
 
         # naive task decomposition into the Essential Four (ex CEO)
@@ -308,7 +258,7 @@ def create_and_run_plan(
             task_id = f"task_{uuid.uuid4().hex[:12]}"
             now = utc_now()
             description = _default_task_description(agent, req.high_level_goal)
-            conn.execute(
+            state_store._conn.execute(
                 """
                 INSERT INTO tasks(task_id, plan_id, agent, description, state, attempts, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, 0, ?, ?)
@@ -316,13 +266,13 @@ def create_and_run_plan(
                 (task_id, plan_id, agent, description, "pending", now, now),
             )
             _record_event(
-                conn,
+                state_store._conn,
                 plan_id,
                 task_id,
                 "task_created",
                 {"agent": agent, "description": description},
             )
-        conn.commit()
+        state_store._conn.commit()
 
     # Instead of returning a FinalPlan, start the background task
     background_tasks.add_task(run_plan, plan_id)
@@ -366,12 +316,12 @@ def _bootstrap_synth(goal: str) -> str:
 # -------------------------------------------------------------
 @app.get("/state/plans/{plan_id}", response_model=PlanInspectResponse, tags=["state"])
 def inspect_plan(plan_id: str) -> PlanInspectResponse:
-    with _connect() as conn:
-        p = conn.execute(
+    with state_store._conn:
+        p = state_store._conn.execute(
             "SELECT * FROM plans WHERE plan_id = ?", (plan_id,)).fetchone()
         if not p:
             raise HTTPException(status_code=404, detail="plan_not_found")
-        tasks = conn.execute(
+        tasks = state_store._conn.execute(
             "SELECT * FROM tasks WHERE plan_id = ? ORDER BY created_at",
             (plan_id,),
         ).fetchall()
@@ -416,8 +366,8 @@ def list_events(
     q += " ORDER BY created_at DESC LIMIT ?"
     args.append(limit)
 
-    with _connect() as conn:
-        rows = conn.execute(q, tuple(args)).fetchall()
+    with state_store._conn:
+        rows = state_store._conn.execute(q, tuple(args)).fetchall()
 
     events = [
         {
@@ -435,8 +385,8 @@ def list_events(
 
 @app.post("/state/tasks/{task_id}/cancel", response_model=OkResponse, tags=["state"])
 def cancel_task(task_id: str) -> OkResponse:
-    with _connect() as conn:
-        t = conn.execute(
+    with state_store._conn:
+        t = state_store._conn.execute(
             "SELECT * FROM tasks WHERE task_id = ?", (task_id,)).fetchone()
         if not t:
             raise HTTPException(status_code=404, detail="task_not_found")
@@ -444,19 +394,19 @@ def cancel_task(task_id: str) -> OkResponse:
             raise HTTPException(
                 status_code=400, detail="task_already_terminal")
         now = utc_now()
-        conn.execute(
+        state_store._conn.execute(
             "UPDATE tasks SET state = ?, updated_at = ? WHERE task_id = ?",
             ("cancelled", now, task_id),
         )
-        _record_event(conn, t["plan_id"], task_id, "task_cancelled", None)
-        conn.commit()
+        _record_event(state_store._conn, t["plan_id"], task_id, "task_cancelled", None)
+        state_store._conn.commit()
     return OkResponse()
 
 
 @app.post("/state/tasks/{task_id}/retry", response_model=OkResponse, tags=["state"])
 def retry_task(task_id: str) -> OkResponse:
-    with _connect() as conn:
-        t = conn.execute(
+    with state_store._conn:
+        t = state_store._conn.execute(
             "SELECT * FROM tasks WHERE task_id = ?", (task_id,)).fetchone()
         if not t:
             raise HTTPException(status_code=404, detail="task_not_found")
@@ -465,14 +415,75 @@ def retry_task(task_id: str) -> OkResponse:
                 status_code=400, detail="retry_not_allowed_from_state")
         attempts = int(t["attempts"] or 0) + 1
         now = utc_now()
-        conn.execute(
+        state_store._conn.execute(
             "UPDATE tasks SET state = ?, attempts = ?, last_error = NULL, updated_at = ? WHERE task_id = ?",
             ("pending", attempts, now, task_id),
         )
-        _record_event(conn, t["plan_id"], task_id,
+        _record_event(state_store._conn, t["plan_id"], task_id,
                       "task_retry", {"attempts": attempts})
-        conn.commit()
+        state_store._conn.commit()
     return OkResponse()
+
+
+@app.get("/plan/{plan_id}/result", tags=["plan"])
+def get_plan_result(plan_id: str) -> Dict[str, Any]:
+    """Retrieve the final synthesized plan result for a completed plan."""
+    try:
+        # First check if the plan exists and is closed
+        with state_store._conn:
+            plan = state_store._conn.execute(
+                "SELECT * FROM plans WHERE plan_id = ?", (plan_id,)
+            ).fetchone()
+            
+            if not plan:
+                raise HTTPException(status_code=404, detail="plan_not_found")
+            
+            if plan["status"] not in ["closed", "synthesis_failed"]:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"plan_not_ready: current status is {plan['status']}"
+                )
+            
+            # Get the final plan from the final_plans table
+            final_plan = state_store._conn.execute(
+                "SELECT * FROM final_plans WHERE plan_id = ?", (plan_id,)
+            ).fetchone()
+            
+            if not final_plan:
+                if plan["status"] == "synthesis_failed":
+                    return {
+                        "plan_id": plan_id,
+                        "status": "synthesis_failed",
+                        "message": "Plan execution completed but synthesis failed",
+                        "plan_data": None
+                    }
+                else:
+                    raise HTTPException(
+                        status_code=404, 
+                        detail="final_plan_not_found"
+                    )
+            
+            # Parse the final plan content
+            try:
+                final_plan_data = json.loads(final_plan["content"])
+                return {
+                    "plan_id": plan_id,
+                    "status": "completed",
+                    "message": "Final plan retrieved successfully",
+                    "plan_data": final_plan_data,
+                    "created_at": final_plan["created_at"]
+                }
+            except json.JSONDecodeError:
+                raise HTTPException(
+                    status_code=500, 
+                    detail="final_plan_corrupted"
+                )
+                
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving plan result for {plan_id}: {e}")
+        raise HTTPException(status_code=500, detail="internal_server_error")
 
 
 # -------------------------------------------------------------

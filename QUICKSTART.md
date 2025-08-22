@@ -1,18 +1,21 @@
 # 🚀 Quick Development Setup
 
 ## Prerequisites
+
 - Python 3.11 or 3.12
 - Git
 
 ## Getting Started
 
 1. **Clone and navigate to the repository:**
+
    ```bash
    git clone https://github.com/russell-henderson/the_board.git
    cd the_board
    ```
 
 2. **Create and activate a virtual environment:**
+
    ```bash
    python -m venv venv
    
@@ -24,6 +27,7 @@
    ```
 
 3. **Install dependencies:**
+
    ```bash
    # For full installation (requires internet):
    pip install -e .
@@ -33,11 +37,13 @@
    ```
 
 4. **Run basic functionality tests:**
+
    ```bash
    python test_core_functionality.py
    ```
 
 5. **Start the development server:**
+
    ```bash
    # Method 1: Using the built-in start script
    python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
@@ -47,6 +53,7 @@
    ```
 
 6. **Test the API:**
+
    ```bash
    # Check health
    curl http://localhost:8000/health
@@ -58,6 +65,7 @@
 ## Basic Usage
 
 ### Create a Strategic Plan
+
 ```bash
 curl -X POST "http://localhost:8000/plan" \
   -H "Content-Type: application/json" \
@@ -65,6 +73,7 @@ curl -X POST "http://localhost:8000/plan" \
 ```
 
 ### Check Plan Status
+
 ```bash
 curl "http://localhost:8000/state/plans/{plan_id}"
 ```
