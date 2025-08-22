@@ -79,9 +79,12 @@ messages
 # AI Models & Large Files
 # =============================================================================
 
-# Downloaded AI models
-models/
-models/*
+# Downloaded AI models (exclude from root and ai_models dir, but not src/models/)
+ai_models/
+downloads/models/
+models/*.gguf
+models/*.bin
+models/*.safetensors
 *.gguf
 *.bin
 *.safetensors
