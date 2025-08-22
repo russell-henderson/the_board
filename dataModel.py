@@ -33,22 +33,22 @@ class AgentType(str, Enum):
     CTO = "CTO"           # Nexus - Technical architecture
     COO = "COO"           # Momentum - Execution and operations
     CMO = "CMO"           # Muse - Marketing strategy
-    
+
     # Additional Specialists
     CISO = "CISO"         # Guardian - Security and compliance
     CHRO = "CHRO"         # Pulse - HR and organizational design
     CIO = "CIO"           # Insight - Data strategy and analytics
-    RESEARCH = "RESEARCH" # Curio - Knowledge base maintenance
-    STRATEGY = "STRATEGY" # Vision - Long-term strategic positioning
-    ENGINEERING = "ENGINEERING" # Forge - Prototyping and infrastructure
+    RESEARCH = "RESEARCH"  # Curio - Knowledge base maintenance
+    STRATEGY = "STRATEGY"  # Vision - Long-term strategic positioning
+    ENGINEERING = "ENGINEERING"  # Forge - Prototyping and infrastructure
     ETHICS = "ETHICS"     # Beacon - Ethical safeguards
-    INNOVATION = "INNOVATION" # Flux - Innovation scouting
+    INNOVATION = "INNOVATION"  # Flux - Innovation scouting
     LEGAL = "LEGAL"       # Anchor - Legal and compliance
-    KNOWLEDGE = "KNOWLEDGE" # Scribe - Documentation and structuring
-    CREATIVE = "CREATIVE" # Spark - Creative design and storytelling
-    LOGISTICS = "LOGISTICS" # Vector - Resource allocation
-    COMMUNICATIONS = "COMMUNICATIONS" # Echo - Public relations
-    SUSTAINABILITY = "SUSTAINABILITY" # Horizon - ESG and sustainability
+    KNOWLEDGE = "KNOWLEDGE"  # Scribe - Documentation and structuring
+    CREATIVE = "CREATIVE"  # Spark - Creative design and storytelling
+    LOGISTICS = "LOGISTICS"  # Vector - Resource allocation
+    COMMUNICATIONS = "COMMUNICATIONS"  # Echo - Public relations
+    SUSTAINABILITY = "SUSTAINABILITY"  # Horizon - ESG and sustainability
     UNKNOWN = "UNKNOWN"
 
 
@@ -71,22 +71,60 @@ class ConfidenceLevel(str, Enum):
     LOW = "low"                   # < 0.50 - Uncertain, human review advised
 
 
+class Priority(str, Enum):
+    low = "low"
+    medium = "medium"
+    high = "high"
+    urgent = "urgent"
+
+
+def _now_utc() -> datetime:
+    return datetime.now(timezone.utc)
 # ==============================
 # Core Models
 # ==============================
 
+
 class OdysseyGoalRequest(BaseModel):
     """User goal submission for strategic analysis by the Board."""
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    model_config = ConfigDict(
+        frozen=False,
+        str_strip_whitespace=True,
+        json_schema_extra={
+            "example": {
+                "high_level_goal": "Launch a SaaS for SMB accounting in Q2",
+                "user_context": "Solo founder, $50k budget, basic Rails + Postgres stack",
+                "priority": "high",
+                "deadline": "2025-09-30T00:00:00Z",
+                "budget_range": "$25k–$75k",
+                "team_size": "1–3",
+                "industry": "Fintech / SMB",
+                "metadata": {"source": "cli-smoke-test", "env": "dev"},
+            }
+        },
+    )
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Client-supplied or generated request id")
     high_level_goal: str = Field(..., description="Primary strategic objective")
     user_context: Optional[str] = Field(None, description="Additional context, constraints, or background")
-    priority: Optional[str] = Field("medium", description="Goal priority: low, medium, high, urgent")
-    deadline: Optional[datetime] = Field(None, description="Target completion date")
+    priority: Priority = Field(default=Priority.medium, description="Goal priority")
+    deadline: Optional[datetime] = Field(None, description="Target completion date (ISO8601)")
     budget_range: Optional[str] = Field(None, description="Budget constraints or range")
     team_size: Optional[str] = Field(None, description="Available team resources")
     industry: Optional[str] = Field(None, description="Industry or sector context")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="Server-side creation timestamp (UTC)")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Free-form structured metadata")
+
+# --- Validators ---
+
+    @field_validator("deadline")
+    @classmethod
+    def ensure_deadline_utc(cls, v: Optional[datetime]) -> Optional[datetime]:
+        if v is None:
+            return v
+        if v.tzinfo is None:
+            return v.replace(tzinfo=timezone.utc)
+        return v.astimezone(timezone.utc)
 
     @field_validator("high_level_goal")
     @classmethod
@@ -96,12 +134,21 @@ class OdysseyGoalRequest(BaseModel):
         return v.strip()
 
     def to_json(self) -> str:
-        return self.json()
+        return self.model_dump_json()
 
     @classmethod
     def from_json(cls, data: str) -> "OdysseyGoalRequest":
-        return cls.parse_raw(data)
+        return cls.model_validate_json(data)
+    
+ # --- JSON helpers (Pydantic v2 style) ---
+ 
+    def to_json(self) -> str:
+        return self.model_dump_json()
 
+    @classmethod
+    def from_json(cls, data: str) -> "OdysseyGoalRequest":
+        return cls.model_validate_json(data)
+ 
 
 class UserQuery(BaseModel):
     """Inbound user request captured at the orchestration boundary."""
@@ -182,7 +229,8 @@ class AgentTask(BaseModel):
     @classmethod
     def non_empty(cls, v: str) -> str:
         if not v or not v.strip():
-            raise ValueError("Fields 'title' and 'instructions' must not be empty")
+            raise ValueError(
+                "Fields 'title' and 'instructions' must not be empty")
         return v
 
     def mark(self, new_status: TaskStatus) -> None:
@@ -200,17 +248,24 @@ class AgentTask(BaseModel):
 class FinalPlan(BaseModel):
     """Synthesized strategic output from the Board with confidence scoring."""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    original_goal: str = Field(..., description="The user's original high-level goal")
-    synthesized_strategy: str = Field(..., description="Markdown-formatted strategic plan")
+    original_goal: str = Field(...,
+                               description="The user's original high-level goal")
+    synthesized_strategy: str = Field(...,
+                                      description="Markdown-formatted strategic plan")
     contributing_agents: List[AgentType] = Field(default_factory=list)
     identified_risks: List[str] = Field(default_factory=list)
     opportunities: List[str] = Field(default_factory=list)
     recommendations: List[str] = Field(default_factory=list)
-    confidence_score: float = Field(..., ge=0.0, le=1.0, description="Overall confidence in the plan")
-    execution_timeline: Optional[str] = Field(None, description="Recommended timeline for execution")
-    resource_requirements: Optional[str] = Field(None, description="Required resources and budget")
-    success_metrics: List[str] = Field(default_factory=list, description="KPIs to measure success")
-    citations: List[str] = Field(default_factory=list, description="Source materials and references")
+    confidence_score: float = Field(..., ge=0.0, le=1.0,
+                                    description="Overall confidence in the plan")
+    execution_timeline: Optional[str] = Field(
+        None, description="Recommended timeline for execution")
+    resource_requirements: Optional[str] = Field(
+        None, description="Required resources and budget")
+    success_metrics: List[str] = Field(
+        default_factory=list, description="KPIs to measure success")
+    citations: List[str] = Field(
+        default_factory=list, description="Source materials and references")
     generated_at: datetime = Field(default_factory=datetime.utcnow)
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -242,16 +297,25 @@ class FinalPlan(BaseModel):
 class ErrorReport(BaseModel):
     """Structured error reporting for escalations and debugging."""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    error_type: str = Field(..., description="Type of error (e.g., 'agent_failure', 'system_error')")
-    error_message: str = Field(..., description="Human-readable error description")
-    error_code: Optional[str] = Field(None, description="Machine-readable error code")
-    severity: str = Field("medium", description="Error severity: low, medium, high, critical")
-    affected_components: List[str] = Field(default_factory=list, description="Components affected by the error")
-    stack_trace: Optional[str] = Field(None, description="Technical stack trace if available")
-    user_context: Optional[str] = Field(None, description="User context when error occurred")
-    suggested_actions: List[str] = Field(default_factory=list, description="Recommended actions to resolve")
+    error_type: str = Field(...,
+                            description="Type of error (e.g., 'agent_failure', 'system_error')")
+    error_message: str = Field(...,
+                               description="Human-readable error description")
+    error_code: Optional[str] = Field(
+        None, description="Machine-readable error code")
+    severity: str = Field(
+        "medium", description="Error severity: low, medium, high, critical")
+    affected_components: List[str] = Field(
+        default_factory=list, description="Components affected by the error")
+    stack_trace: Optional[str] = Field(
+        None, description="Technical stack trace if available")
+    user_context: Optional[str] = Field(
+        None, description="User context when error occurred")
+    suggested_actions: List[str] = Field(
+        default_factory=list, description="Recommended actions to resolve")
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    resolved_at: Optional[datetime] = Field(None, description="When the error was resolved")
+    resolved_at: Optional[datetime] = Field(
+        None, description="When the error was resolved")
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("error_message")
@@ -276,16 +340,25 @@ class ErrorReport(BaseModel):
 class UserCorrection(BaseModel):
     """User feedback and corrections for continuous improvement."""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    original_plan_id: str = Field(..., description="ID of the plan being corrected")
-    correction_type: str = Field(..., description="Type of correction (e.g., 'factual_error', 'missing_context')")
-    description: str = Field(..., description="Detailed description of the correction needed")
-    suggested_fix: Optional[str] = Field(None, description="User's suggested correction")
-    priority: str = Field("medium", description="Correction priority: low, medium, high")
-    affected_sections: List[str] = Field(default_factory=list, description="Sections of the plan that need updates")
-    user_confidence: Optional[float] = Field(None, ge=0.0, le=1.0, description="User's confidence in the correction")
+    original_plan_id: str = Field(...,
+                                  description="ID of the plan being corrected")
+    correction_type: str = Field(
+        ..., description="Type of correction (e.g., 'factual_error', 'missing_context')")
+    description: str = Field(...,
+                             description="Detailed description of the correction needed")
+    suggested_fix: Optional[str] = Field(
+        None, description="User's suggested correction")
+    priority: str = Field(
+        "medium", description="Correction priority: low, medium, high")
+    affected_sections: List[str] = Field(
+        default_factory=list, description="Sections of the plan that need updates")
+    user_confidence: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="User's confidence in the correction")
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    status: str = Field("pending", description="Status: pending, in_progress, completed, rejected")
-    agent_response: Optional[str] = Field(None, description="Response from the Board regarding the correction")
+    status: str = Field(
+        "pending", description="Status: pending, in_progress, completed, rejected")
+    agent_response: Optional[str] = Field(
+        None, description="Response from the Board regarding the correction")
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("description")
@@ -349,8 +422,10 @@ class KnowledgeDocument(BaseModel):
     title: str = Field(..., description="Document title")
     content: str = Field(..., description="Document content for embedding")
     source: str = Field(..., description="Source of the document")
-    document_type: str = Field(..., description="Type of document (e.g., 'research_paper', 'news_article')")
-    tags: List[str] = Field(default_factory=list, description="Categorization tags")
+    document_type: str = Field(
+        ..., description="Type of document (e.g., 'research_paper', 'news_article')")
+    tags: List[str] = Field(default_factory=list,
+                            description="Categorization tags")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_updated: datetime = Field(default_factory=datetime.utcnow)
     metadata: Dict[str, Any] = Field(default_factory=dict)
@@ -367,11 +442,14 @@ class Citation(BaseModel):
     """Citation reference for knowledge sources."""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str = Field(..., description="Cited work title")
-    authors: List[str] = Field(default_factory=list, description="Author names")
+    authors: List[str] = Field(
+        default_factory=list, description="Author names")
     source: str = Field(..., description="Source URL or reference")
-    publication_date: Optional[datetime] = Field(None, description="Publication date")
+    publication_date: Optional[datetime] = Field(
+        None, description="Publication date")
     document_type: str = Field(..., description="Type of source")
-    relevance_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Relevance to the query")
+    relevance_score: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="Relevance to the query")
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -389,7 +467,8 @@ class HealthCheck(BaseModel):
 class SystemStatus(BaseModel):
     """Comprehensive system status including all components."""
     overall_status: str = Field(..., description="Overall system health")
-    components: Dict[str, Dict[str, Any]] = Field(default_factory=dict, description="Status of individual components")
+    components: Dict[str, Dict[str, Any]] = Field(
+        default_factory=dict, description="Status of individual components")
     last_check: datetime = Field(default_factory=datetime.utcnow)
     version: str = Field(..., description="System version")
     uptime: Optional[str] = Field(None, description="System uptime")
@@ -397,8 +476,10 @@ class SystemStatus(BaseModel):
 
 class AgentRegistry(BaseModel):
     """Registry of available agents and their capabilities."""
-    agents: Dict[AgentType, Dict[str, Any]] = Field(default_factory=dict, description="Agent definitions")
-    total_count: int = Field(0, description="Total number of registered agents")
+    agents: Dict[AgentType, Dict[str, Any]] = Field(
+        default_factory=dict, description="Agent definitions")
+    total_count: int = Field(
+        0, description="Total number of registered agents")
     last_updated: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -410,7 +491,8 @@ class PlanResponse(BaseModel):
     """Response to a plan creation request."""
     plan_id: str = Field(..., description="ID of the created plan")
     status: str = Field(..., description="Current plan status")
-    estimated_completion: Optional[datetime] = Field(None, description="Estimated completion time")
+    estimated_completion: Optional[datetime] = Field(
+        None, description="Estimated completion time")
     message: str = Field(..., description="Human-readable status message")
 
 
@@ -430,30 +512,30 @@ class TaskUpdateResponse(BaseModel):
 __all__ = [
     # Core models
     "OdysseyGoalRequest",
-    "AgentTask", 
+    "AgentTask",
     "AgentResponse",
     "FinalPlan",
     "ErrorReport",
     "UserCorrection",
-    
+
     # Legacy models
     "SynthesizedOutput",
     "UserQuery",
     "AgentMessage",
-    
+
     # Knowledge models
     "KnowledgeDocument",
     "Citation",
-    
+
     # Utility models
     "HealthCheck",
     "SystemStatus",
     "AgentRegistry",
-    
+
     # API models
     "PlanResponse",
     "TaskUpdateResponse",
-    
+
     # Enums
     "AgentType",
     "TaskStatus",
