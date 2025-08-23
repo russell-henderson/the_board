@@ -5,8 +5,9 @@
 ---
 
 ## 🔥 Immediate (Today)
-- [ ] **Create `WELCOME.md`** — greeting from creators (intro, mission, how to begin)
-- [ ] **Add Dashboard LED strip (A)** — 5 agent LEDs (CEO, CFO, CTO, COO, CMO) that light on activity
+
+- [X] **Create `WELCOME.md`** — greeting from creators (intro, mission, how to begin)
+- [X] **Add Dashboard LED strip (A)** — 5 agent LEDs (CEO, CFO, CTO, COO, CMO) that light on activity
 - [ ] **Add “Direct Chat — All Agents” panel (B)** — broadcast input + scrollable log, wired to backend
 - [ ] **Wire FastAPI WebSockets** — `/ws/agent-activity` and `/ws/chat` endpoints
 - [ ] **Simulate activity endpoint** — `POST /realtime/simulate-activity` for UI testing
@@ -15,6 +16,7 @@
 ---
 
 ## 🧠 Strategic Goal Submission (MVP)
+
 - [ ] UI: “Submit Strategic Goal” form (goal + context)
 - [ ] API: `POST /plan` → `OdysseyGoalRequest` (see `dataModel.py`)
 - [ ] CEO stub: decompose into mock tasks and persist via `StateStore`
@@ -23,6 +25,7 @@
 ---
 
 ## 🧩 Backend & State Layer
+
 - [ ] Implement `StateStore` CRUD for: plans, tasks, events (SQLite WAL)
 - [ ] Define Task FSM per `WORKFLOWS.md` (`pending → in_progress → completed/failed/...`)
 - [ ] Events: `plan_created`, `task_state_changed`, `task_retry`, `task_cancelled`, etc.
@@ -32,6 +35,7 @@
 ---
 
 ## 🖥️ Frontend (Dashboard)
+
 - [ ] LED component with auto-dim pulse for active agent
 - [ ] Chat panel with send box, timestamps, and auto-scroll
 - [ ] Recent Activity feed bound to `/state` events
@@ -45,6 +49,7 @@
 ---
 
 ## 🗂️ Knowledge Layer
+
 - [ ] Ingestion job: drop markdown/PDFs in `knowledge/` → embed into ChromaDB
 - [ ] Provenance metadata (source, tags, timestamp)
 - [ ] Simple search endpoint `/kb/search?q=` returning citations
@@ -52,6 +57,7 @@
 ---
 
 ## 🤖 Agents (Essentials)
+
 - [ ] CEO (Odyssey): task routing & synthesis skeleton
 - [ ] CFO (Abacus): finance analysis stub
 - [ ] CTO (Nexus): technical feasibility stub
@@ -61,6 +67,7 @@
 ---
 
 ## 🧱 Data Models (align with `TECHSPEC.md`)
+
 - [ ] `OdysseyGoalRequest`
 - [ ] `AgentTask` (task_id, agent, description, state, attempts, last_error)
 - [ ] `AgentResponse` (analysis, confidence, citations[])
@@ -69,6 +76,7 @@
 ---
 
 ## 🔐 Security & Settings
+
 - [ ] `.env` config (OLLAMA, PRIMARY_LLM, CHROMA_PERSIST_DIRECTORY, STATE_DB_PATH)
 - [ ] Gate `/state/*` with shared secret for dev
 - [ ] Redact sensitive payloads in events
@@ -76,6 +84,7 @@
 ---
 
 ## 🧪 Testing
+
 - [ ] Unit tests for StateStore transitions
 - [ ] WS tests (activity + chat)
 - [ ] Integration: submit goal → tasks → synthesis → close
@@ -83,6 +92,7 @@
 ---
 
 ## 🚀 DevOps & Runbooks
+
 - [ ] `poetry run dev` and `poetry run start` scripts
 - [ ] Windows service (NSSM) per `DEPLOYMENT.md`
 - [ ] Health endpoints: `/health`, `/healthz`, `/readyz`
@@ -91,6 +101,7 @@
 ---
 
 ## ✨ Nice-to-Have (Post‑MVP)
+
 - [ ] HTMX/SSE stream for events instead of polling
 - [ ] Export final plan to PDF/DOCX/Markdown templates
 - [ ] Agent icons & subtle animations on the LED strip
@@ -100,6 +111,7 @@
 ---
 
 ### Notes
+
 - Keep brand voice authoritative & clear (see `docs/BRAND_GUIDELINES.md`).
 - All lifecycle mutations must go through `StateStore` (see `docs/WORKFLOWS.md`).
 - Use `src/main.py` as the canonical entry point (see `docs/DEPLOYMENT.md`).
