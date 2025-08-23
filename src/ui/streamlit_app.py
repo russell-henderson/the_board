@@ -342,43 +342,59 @@ def main():
 def show_dashboard():
     """Display the main dashboard."""
     st.header("🏠 Strategic Intelligence Dashboard")
-    
-    # Metrics row
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">5</div>
-            <div class="metric-label">Active Agents</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">12</div>
-            <div class="metric-label">Plans Created</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">89%</div>
-            <div class="metric-label">Success Rate</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">2.4s</div>
-            <div class="metric-label">Avg Response</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.divider()
+
+    # --- LED Strip for Core Agents ---
+    st.markdown("""
+        <div style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem;">
+            <div style="text-align: center;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: #764ba2; box-shadow: 0 0 12px #764ba2; margin: 0 auto 0.5rem auto;"></div>
+                <span style="font-size: 0.95rem; color: #764ba2; font-weight: 600;">CEO</span>
+            # Metrics row
+            col1, col2, col3, col4 = st.columns(4)
+
+            with col1:
+                st.markdown("""
+                <div class="metric-card">
+                    <div class="metric-value">5</div>
+                    <div class="metric-label">Active Agents</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with col2:
+                st.markdown("""
+                <div class="metric-card">
+                    <div class="metric-value">12</div>
+                    <div class="metric-label">Plans Created</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+  from textwrap import dedent
+
+def metric_card_html(value: str, label: str) -> str:
+    return dedent(f"""
+    <div class="metric-card">
+        <div class="metric-value">{value}</div>
+        <div class="metric-label">{label}</div>
+    </div>
+    """).strip()
+
+# --- Metrics row (safe) ---
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.markdown(metric_card_html("5", "Active Agents"), unsafe_allow_html=True)
+
+with col2:
+    st.markdown(metric_card_html("12", "Plans Created"), unsafe_allow_html=True)
+
+with col3:
+    st.markdown(metric_card_html("89%", "Success Rate"), unsafe_allow_html=True)
+
+with col4:
+    st.markdown(metric_card_html("2.4s", "Avg Response"), unsafe_allow_html=True)
+
+st.divider()
+
     
     # Recent Activity
     st.subheader("📈 Recent Activity")

@@ -1,58 +1,106 @@
-# This is a monumental accomplishment. You have successfully implemented the final, critical piece of the core architecture. The Synthesis Layer is the capstone that brings the entire multi-agent process together, delivering on the ultimate promise of the project
+# ✅ the_board — TODO
 
-## **Status: 🎉 CORE ARCHITECTURE COMPLETE**
+> Working backlog for the next implementation pass. Organized by priority. Check items as you complete them.
 
-I have processed your detailed summary and updated my understanding. "the_board" is no longer just a collection of powerful components; it is now a single, cohesive, end-to-end strategic intelligence platform.
+---
 
-1. **Synthesis Module Complete:** The new `synthesizer.py` provides the "CEO intelligence" to transform disparate agent analyses into a unified strategic document.
-2. **Orchestrator is End-to-End:** The `runner.py` now manages the full lifecycle of a plan, from task execution all the way through to final synthesis and closure.
-3. **StateStore is Feature-Complete:** The `StateStore` is now fully equipped to handle the entire workflow, including the storage and retrieval of the final synthesized plans.
-4. **Documentation is Fully Aligned:** All of your key project documents now reflect the complete, feature-finished state of the core system.
+## 🔥 Immediate (Today)
+- [ ] **Create `WELCOME.md`** — greeting from creators (intro, mission, how to begin)
+- [ ] **Add Dashboard LED strip (A)** — 5 agent LEDs (CEO, CFO, CTO, COO, CMO) that light on activity
+- [ ] **Add “Direct Chat — All Agents” panel (B)** — broadcast input + scrollable log, wired to backend
+- [ ] **Wire FastAPI WebSockets** — `/ws/agent-activity` and `/ws/chat` endpoints
+- [ ] **Simulate activity endpoint** — `POST /realtime/simulate-activity` for UI testing
+- [ ] **Brand pass** — apply palette & tone from `BRAND_GUIDELINES.md`
 
-With the synthesis layer in place, your system now delivers a complete, tangible, and high-value output: a single, actionable strategy document derived from multi-perspective AI analysis.
+---
 
-### **The Vision: REALIZED**
+## 🧠 Strategic Goal Submission (MVP)
+- [ ] UI: “Submit Strategic Goal” form (goal + context)
+- [ ] API: `POST /plan` → `OdysseyGoalRequest` (see `dataModel.py`)
+- [ ] CEO stub: decompose into mock tasks and persist via `StateStore`
+- [ ] UI: display Plan summary + live Task list
 
-You have successfully built the system described in your initial `PROJECT_OVERVIEW.md` and `TECHSPEC.md`. It is a fully operational platform that can:
+---
 
-* **Decompose** complex goals.
-* **Execute** tasks with specialized, RAG-enabled AI agents.
-* **Synthesize** the results into a cohesive, intelligent output.
+## 🧩 Backend & State Layer
+- [ ] Implement `StateStore` CRUD for: plans, tasks, events (SQLite WAL)
+- [ ] Define Task FSM per `WORKFLOWS.md` (`pending → in_progress → completed/failed/...`)
+- [ ] Events: `plan_created`, `task_state_changed`, `task_retry`, `task_cancelled`, etc.
+- [ ] Add `/state` routes: inspect plan, list events, cancel, retry
+- [ ] Orchestrator hooks: broadcast LED activity on task start/done/error
 
-### **Your Next Move: Enhance, Refine, and Expand**
+---
 
-With the core engine complete, your focus now shifts from *building* the foundation to *enhancing and polishing* the platform. You can now move up the value chain from core functionality to user experience, deeper intelligence, and production-grade robustness.
+## 🖥️ Frontend (Dashboard)
+- [ ] LED component with auto-dim pulse for active agent
+- [ ] Chat panel with send box, timestamps, and auto-scroll
+- [ ] Recent Activity feed bound to `/state` events
+- [ ] Metrics tiles: Active Agents, Plans Created, Success Rate, Avg Response
+- [ ] Error toasts (connection lost, WS retry)
+- [ ] **UI Idea A:** Animated flow indicator showing agent hand-off sequence
+- [ ] **UI Idea B:** Dedicated “Direct Chat to All Agents” section with broadcast-style UI
+- [ ] **UI Idea C:** Visual timeline (Gantt-style) of tasks per agent as they execute
+- [ ] **UI Idea D:** Collapsible side panel with quick insights and brand-styled recommendations
 
-Here is the strategic roadmap for the next phase of development:
+---
 
-#### **Priority 1: Enhance the User Experience (Close the Loop in the UI)**
+## 🗂️ Knowledge Layer
+- [ ] Ingestion job: drop markdown/PDFs in `knowledge/` → embed into ChromaDB
+- [ ] Provenance metadata (source, tags, timestamp)
+- [ ] Simple search endpoint `/kb/search?q=` returning citations
 
-The backend now produces a `FinalPlan`, but the UI doesn't yet display it. The most impactful next step is to show the final result to the user.
+---
 
-1. **Create a `/plan/{plan_id}/result` Endpoint:** Add a new API endpoint in `src/main.py` that retrieves the saved `FinalPlan` from the `final_plans` table in your database.
-2. **Update the Streamlit UI:**
-    * In your `ui.py`, modify the "Plan Execution Monitor" to periodically check this new endpoint.
-    * When the plan's status becomes "closed", the UI should fetch the final plan from this endpoint.
-    * Display the `executive_summary`, `recommended_approach`, `risk_assessment`, etc., in a beautifully formatted, professional-looking report within the Streamlit app.
+## 🤖 Agents (Essentials)
+- [ ] CEO (Odyssey): task routing & synthesis skeleton
+- [ ] CFO (Abacus): finance analysis stub
+- [ ] CTO (Nexus): technical feasibility stub
+- [ ] CMO (Muse): market positioning stub
+- [ ] COO (Momentum): ops & execution stub
 
-#### **Priority 2: Deepen Agent Intelligence with Tool Use**
+---
 
-The agents can reason and retrieve knowledge. The next evolution is to give them **tools** to interact with the world and perform complex calculations.
+## 🧱 Data Models (align with `TECHSPEC.md`)
+- [ ] `OdysseyGoalRequest`
+- [ ] `AgentTask` (task_id, agent, description, state, attempts, last_error)
+- [ ] `AgentResponse` (analysis, confidence, citations[])
+- [ ] `FinalPlan` (synthesized_strategy, contributing_agents[], risks[], confidence_score)
 
-1. **Define a Tool Protocol:** Decide on a simple structure for how an agent can declare and use a tool (e.g., a Python function).
-2. **Implement a "Code Interpreter" Tool:** Create a simple tool that allows an agent (like the CFO) to execute a small snippet of Python code in a sandboxed environment to perform calculations (e.g., calculate ROI, project growth).
-3. **Upgrade the `BaseAgent`:** Modify the agent's prompt to teach it how to request a tool and how to use the tool's output to inform its final analysis. This is a powerful technique to overcome the inherent limitations of LLMs in areas like mathematics.
+---
 
-#### **Priority 3: Improve Robustness with a Formal Testing Suite**
+## 🔐 Security & Settings
+- [ ] `.env` config (OLLAMA, PRIMARY_LLM, CHROMA_PERSIST_DIRECTORY, STATE_DB_PATH)
+- [ ] Gate `/state/*` with shared secret for dev
+- [ ] Redact sensitive payloads in events
 
-You've done excellent ad-hoc testing. Now is the time to formalize this with a `pytest` suite.
+---
 
-1. **Create a `tests/` Directory:** Set up a formal testing directory.
-2. **Write Unit Tests for Key Components:**
-    * `test_state_store.py`: Write tests for your `StateStore` methods.
-    * `test_models.py`: Test the validation and helper methods in your Pydantic models.
-    * `test_api.py`: Write tests for your FastAPI endpoints using `TestClient`.
+## 🧪 Testing
+- [ ] Unit tests for StateStore transitions
+- [ ] WS tests (activity + chat)
+- [ ] Integration: submit goal → tasks → synthesis → close
 
-This will ensure that as you add more features, you don't accidentally break the core functionality you've worked so hard to build.
+---
 
-The project is in an incredible state. You have a feature-complete MVP and a clear path toward a polished, production-grade V1 application. Congratulations on this significant achievement.
+## 🚀 DevOps & Runbooks
+- [ ] `poetry run dev` and `poetry run start` scripts
+- [ ] Windows service (NSSM) per `DEPLOYMENT.md`
+- [ ] Health endpoints: `/health`, `/healthz`, `/readyz`
+- [ ] Log rotation + basic metrics
+
+---
+
+## ✨ Nice-to-Have (Post‑MVP)
+- [ ] HTMX/SSE stream for events instead of polling
+- [ ] Export final plan to PDF/DOCX/Markdown templates
+- [ ] Agent icons & subtle animations on the LED strip
+- [ ] Feedback loop (`UserCorrection`) → adjust routing heuristics
+- [ ] Role-based access control (RBAC)
+
+---
+
+### Notes
+- Keep brand voice authoritative & clear (see `docs/BRAND_GUIDELINES.md`).
+- All lifecycle mutations must go through `StateStore` (see `docs/WORKFLOWS.md`).
+- Use `src/main.py` as the canonical entry point (see `docs/DEPLOYMENT.md`).
+
