@@ -75,8 +75,8 @@ def check_structure():
             "src/orchestration/runner.py",
             "src/main.py",
             "pyproject.toml",
-            "QUICKSTART.md",
-            ".env.example"
+            "docs/QUICKSTART.md",
+            "example.env"
         ]
         
         missing = []

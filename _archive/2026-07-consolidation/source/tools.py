@@ -52,7 +52,7 @@ class CodeInterpreterTool(BaseTool):
     def __init__(self):
         super().__init__(
             name="code_interpreter",
-            description="Execute simple Python code for calculations and data analysis",
+            description="Execute Python code for calculations and data analysis",
             required_params=["code"]
         )
         
@@ -210,37 +210,12 @@ class CodeInterpreterTool(BaseTool):
             'e': math.e,
         })
         
-        # Execute the code
-        exec(code, safe_namespace)
-        
-        # Return the result (last expression or None)
-        if code.strip().endswith(';'):
-            # If code ends with semicolon, look for result variable
-            lines = code.strip().split('\n')
-            for line in reversed(lines):
-                if '=' in line and not line.strip().startswith('#'):
-                    var_name = line.split('=')[0].strip()
-                    if var_name in safe_namespace:
-                        return safe_namespace[var_name]
-            return None
-        else:
-            # Try to evaluate the last expression
-            try:
-                # Parse the last line as an expression
-                lines = [line.strip() for line in code.split('\n') if line.strip() and not line.strip().startswith('#')]
-                if lines:
-                    last_line = lines[-1]
-                    # Remove trailing semicolon if present
-                    if last_line.endswith(';'):
-                        last_line = last_line[:-1]
-                    
-                    # Try to evaluate the last line
-                    result = eval(last_line, safe_namespace)
-                    return result
-            except:
-                pass
-            
-            return None
+        tree = ast.parse(code, mode="exec")
+        last_expression = tree.body.pop() if tree.body and isinstance(tree.body[-1], ast.Expr) else None
+        exec(compile(tree, "<board-tool>", "exec"), safe_namespace)
+        if last_expression is not None:
+            return eval(compile(ast.Expression(last_expression.value), "<board-tool>", "eval"), safe_namespace)
+        return None
 
 class FinancialCalculatorTool(BaseTool):
     """Tool for financial calculations commonly needed by CFO agents."""

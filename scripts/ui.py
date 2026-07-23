@@ -12,7 +12,7 @@ from pathlib import Path
 def main():
     """Launch the Streamlit UI."""
     # Get the path to the Streamlit app
-    src_path = Path(__file__).parent.parent / "src" / "ui" / "streamlit_app.py
+    src_path = Path(__file__).parent.parent / "src" / "ui" / "streamlit_app.py"
     
     if not src_path.exists():
         print(f"Streamlit app not found at: {src_path}")

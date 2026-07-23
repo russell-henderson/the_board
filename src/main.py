@@ -1,517 +1,116 @@
+"""FastAPI entry point for the_board."""
 from __future__ import annotations
 
-import json
-import logging
-import os
-import sqlite3
-import sys
+import threading
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
-# =============================================================
-# Minimal .env loader to avoid extra deps
-# =============================================================
-# Repo root is one level up from this file: the_board/src/main.py
-REPO_ROOT = Path(__file__).resolve().parents[1]
-ENVFILE = os.environ.get("ENVFILE", str(REPO_ROOT / ".env"))
+from .orchestration.runner import run_plan
+from .state.store import StateTransitionError, state_store
+
+app = FastAPI(title="the_board API", version="2.1.0", description="Local-first multi-agent strategic planning.")
+ESSENTIAL_FOUR = ("COO", "CFO", "CTO", "CMO")
 
 
-def load_env_file(path: str) -> None:
-    if not os.path.exists(path):
-        return
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            os.environ.setdefault(k.strip(), v.strip())
+class GoalRequest(BaseModel):
+    high_level_goal: str = Field(min_length=3, max_length=10000)
+    user_context: Optional[str] = Field(default=None, max_length=20000)
 
 
-load_env_file(ENVFILE)
-
-# Allow importing from the models package
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
-# =============================================================
-# Try to import the project's data models. If unavailable, fall back
-# to small inline versions that satisfy the API contracts.
-# =============================================================
-try:  # project-defined models (preferred)
-    from src.models.odyssey.core import OdysseyGoalRequest
-    from src.models.dataModel import (
-        AgentType,
-        AgentResponse,
-        FinalPlan,
-    )
-    from src.orchestration.runner import run_plan
-except Exception:
-
-    class AgentType(str):  # very small fallback for docs
-        CEO = "CEO"
-        COO = "COO"
-        CFO = "CFO"
-        CTO = "CTO"
-        CMO = "CMO"
-
-    class AgentResponse(BaseModel):
-        agent_type: str
-        analysis: str
-        confidence: float = 0.8
-        citations: List[str] = []
-
-    # OdysseyGoalRequest is now imported from src.models.odyssey.core
-    pass
-
-    class FinalPlan(BaseModel):
-        plan_id: str
-        synthesized_strategy: str
-        contributing_agents: List[str]
-        identified_risks: List[str] = []
-        confidence_score: float = 0.8
-
-# =============================================================
-# Pydantic response helpers used by /state endpoints
-# =============================================================
-
-
-class PlanSummary(BaseModel):
+class AcceptedPlan(BaseModel):
     plan_id: str
-    status: str
-    created_at: str
-    closed_at: Optional[str] = None
+    status: str = "accepted"
+    message: str = "Plan accepted and orchestration started."
 
 
-class TaskSummary(BaseModel):
-    task_id: str
-    plan_id: str
-    agent: str
-    description: str
-    state: str
-    attempts: int
-    last_error: Optional[str] = None
-    created_at: str
-    updated_at: str
+def _task_description(agent: str, goal: str) -> str:
+    templates = {"COO": "Translate the goal into an operating plan, timeline, and owners", "CFO": "Assess budget, assumptions, ROI, and financial risks", "CTO": "Assess technical feasibility, architecture, and delivery risks", "CMO": "Define positioning, audience, channels, and launch messaging"}
+    return f"{templates[agent]}: {goal}"
 
 
-class PlanInspectResponse(BaseModel):
-    plan: PlanSummary
-    tasks: List[TaskSummary]
+@app.get("/")
+def root() -> Dict[str, str]:
+    return {"status": "ok", "message": "the_board is running"}
 
 
-class OkResponse(BaseModel):
-    ok: bool = True
+@app.get("/health")
+def health() -> Dict[str, str]:
+    return {"status": "healthy", "service": "the_board"}
 
 
-# =============================================================
-# Import the StateStore
-# =============================================================
-from .state.store import state_store
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+@app.get("/healthz")
+def healthz() -> Dict[str, str]:
+    return {"status": "ok", "service": "the_board"}
 
 
-# =============================================================
-# Logging - follow brand tone in developer logs
-# =============================================================
-logger = logging.getLogger("the_board")
-if not logger.handlers:
-    level = getattr(logging, os.environ.get(
-        "LOG_LEVEL", "INFO").upper(), logging.INFO)
-    logger.setLevel(level)
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter("[the_board | %(levelname)s] %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-
-# =============================================================
-# FastAPI app
-# =============================================================
-app = FastAPI(
-    title="the_board API", 
-    version="2.0.0",
-    description="""
-    🎯 **the_board** - Multi-Agent Strategic Planning System
-    
-    A sophisticated orchestration platform that leverages specialized AI agents 
-    to provide comprehensive strategic analysis and planning.
-    
-    ## Features
-    
-    * **Multi-Agent Analysis**: CFO, CTO, CMO, and COO agents provide specialized insights
-    * **Task Orchestration**: Intelligent task management and execution
-    * **State Management**: Persistent tracking of plans and task execution
-    * **Real-time Monitoring**: Health checks and status reporting
-    
-    ## Getting Started
-    
-    1. Create a strategic plan using `POST /plan`
-    2. Monitor progress with `GET /state/plans/{plan_id}`
-    3. Retrieve comprehensive analysis and recommendations
-    
-    ## Health Checks
-    
-    * `/health` - Basic service health
-    * `/readyz` - Service readiness (includes database connectivity)
-    """,
-    contact={
-        "name": "the_board Support",
-        "url": "https://github.com/russell-henderson/the_board",
-    },
-    license_info={
-        "name": "MIT",
-    },
-)
-
-
-# -------------------------------------------------------------
-# Health and readiness
-# -------------------------------------------------------------
-class Health(BaseModel):
-    status: str = "ok"
-    message: str = "the_board is running"
-
-
-@app.get("/", response_model=Health, tags=["system"])
-def root() -> Health:
-    return Health()
-
-
-@app.get("/health", tags=["system"])
-def health() -> JSONResponse:
-    return JSONResponse({"status": "healthy"})
-
-
-@app.get("/healthz", tags=["system"])
-def healthz() -> JSONResponse:
-    return JSONResponse({"status": "ok", "service": "the_board"})
-
-
-@app.get("/readyz", tags=["system"])
-def readyz() -> JSONResponse:
+@app.get("/readyz")
+def readyz() -> Dict[str, str]:
     try:
-        # A simple check using the store
         state_store._conn.execute("SELECT 1")
-        return JSONResponse({"status": "ready"})
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"not_ready: {e}")
+    except Exception as exc:
+        raise HTTPException(503, "state_store_unavailable") from exc
+    return {"status": "ready"}
 
 
-# -------------------------------------------------------------
-# Demo echo
-# -------------------------------------------------------------
-class EchoIn(BaseModel):
-    text: str
-
-
-class EchoOut(BaseModel):
-    text: str
-    model: Optional[str] = os.environ.get("PRIMARY_LLM")
-
-
-@app.post("/echo", response_model=EchoOut, tags=["demo"])
-def echo(body: EchoIn) -> EchoOut:
-    return EchoOut(text=body.text)
-
-
-# -------------------------------------------------------------
-# Planning entrypoint - POST /plan
-# -------------------------------------------------------------
-MAX_ATTEMPTS = int(os.environ.get("MAX_ATTEMPTS", "2"))
-ESSENTIAL_FIVE = ["COO", "CFO", "CTO", "CMO"]  # CEO is the orchestrator
-
-
-@app.post("/plan", status_code=202, tags=["plan"])
-def create_and_run_plan(
-    req: OdysseyGoalRequest,
-    background_tasks: BackgroundTasks
-):
-    """Accepts a strategic goal, creates a plan, and starts the
-    orchestration in the background.
-    """
+@app.post("/plan", response_model=AcceptedPlan, status_code=202)
+def create_plan(request: GoalRequest) -> AcceptedPlan:
     plan_id = f"plan_{uuid.uuid4().hex[:12]}"
-    created = utc_now()
-    logger.info(f"[CEO] plan_created id={plan_id}")
-
-    # Use the StateStore to create the plan and tasks
-    # Note: This is a simplified version - the full implementation would use StateStore methods
-    # For now, we'll use the existing direct database approach but import from StateStore
-    with state_store._conn:
-        state_store._conn.execute(
-            "INSERT INTO plans(plan_id, status, original_query, created_at) VALUES (?, ?, ?, ?)",
-            (plan_id, "open", req.high_level_goal, created),
-        )
-        _record_event(state_store._conn, plan_id, None, "plan_created",
-                      {"goal": req.high_level_goal})
-
-        # naive task decomposition into the Essential Four (ex CEO)
-        for agent in ESSENTIAL_FIVE:
-            task_id = f"task_{uuid.uuid4().hex[:12]}"
-            now = utc_now()
-            description = _default_task_description(agent, req.high_level_goal)
-            state_store._conn.execute(
-                """
-                INSERT INTO tasks(task_id, plan_id, agent, description, state, attempts, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, 0, ?, ?)
-                """,
-                (task_id, plan_id, agent, description, "pending", now, now),
-            )
-            _record_event(
-                state_store._conn,
-                plan_id,
-                task_id,
-                "task_created",
-                {"agent": agent, "description": description},
-            )
-        state_store._conn.commit()
-
-    # Instead of returning a FinalPlan, start the background task
-    background_tasks.add_task(run_plan, plan_id)
-    
-    # Return an immediate response so the user isn't waiting
-    return {
-        "message": "Plan accepted and orchestration started.",
-        "plan_id": plan_id
-    }
+    state_store.create_plan(plan_id, request.high_level_goal, request.user_context)
+    for agent in ESSENTIAL_FOUR:
+        task_id = f"task_{uuid.uuid4().hex[:12]}"
+        state_store.create_task(task_id, plan_id, agent, _task_description(agent, request.high_level_goal))
+    # A daemon thread keeps the accepted response non-blocking even in local clients.
+    threading.Thread(target=run_plan, args=(plan_id,), daemon=True).start()
+    return AcceptedPlan(plan_id=plan_id)
 
 
-def _default_task_description(agent: str, goal: str) -> str:
-    if agent == "COO":
-        return f"Translate goal into operations, timeline, and owners for: {goal}"
-    if agent == "CFO":
-        return f"Draft a budget and ROI framing for: {goal}"
-    if agent == "CTO":
-        return f"Evaluate technical options, risks, and a recommended stack for: {goal}"
-    if agent == "CMO":
-        return f"Outline positioning, channels, and launch messaging for: {goal}"
-    return f"Contribute domain analysis for: {goal}"
+@app.get("/state/plans/{plan_id}")
+def inspect_plan(plan_id: str) -> Dict[str, Any]:
+    plan = state_store.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(404, "plan_not_found")
+    return {"plan": plan, "tasks": [dict(task) for task in state_store.get_all_tasks_for_plan(plan_id)], "summary": state_store.get_plan_task_summary(plan_id)}
 
 
-def _bootstrap_synth(goal: str) -> str:
-    return (
-        "# Executive Plan\n\n"
-        f"**Goal**: {goal}\n\n"
-        "## Findings\n\n- Tasks initialized for COO, CFO, CTO, and CMO.\n"
-        "- State is durable in SQLite with WAL.\n\n"
-        "## Risks\n\n- Agent execution is stubbed in this skeleton.\n"
-        "- Clarify inputs and constraints early.\n\n"
-        "## Opportunities\n\n- Parallelize agent work once the bus is added.\n"
-        "- Brand adapter can export to PDF or DOCX.\n\n"
-        "## Recommendations\n\n- Wire agents and message bus next.\n"
-        "- Add retrieval checks for ChromaDB.\n"
-    )
+@app.get("/state/plans/{plan_id}/events")
+def list_events(plan_id: str, task_id: Optional[str] = None, limit: int = Query(200, ge=1, le=1000)) -> Dict[str, List[Dict[str, Any]]]:
+    if not state_store.get_plan(plan_id):
+        raise HTTPException(404, "plan_not_found")
+    return {"events": state_store.get_events_for_plan(plan_id, task_id, limit)}
 
 
-# -------------------------------------------------------------
-# /state API - inspect, events, cancel, retry
-# -------------------------------------------------------------
-@app.get("/state/plans/{plan_id}", response_model=PlanInspectResponse, tags=["state"])
-def inspect_plan(plan_id: str) -> PlanInspectResponse:
-    with state_store._conn:
-        p = state_store._conn.execute(
-            "SELECT * FROM plans WHERE plan_id = ?", (plan_id,)).fetchone()
-        if not p:
-            raise HTTPException(status_code=404, detail="plan_not_found")
-        tasks = state_store._conn.execute(
-            "SELECT * FROM tasks WHERE plan_id = ? ORDER BY created_at",
-            (plan_id,),
-        ).fetchall()
-
-    plan = PlanSummary(
-        plan_id=p["plan_id"],
-        status=p["status"],
-        created_at=p["created_at"],
-        closed_at=p["closed_at"],
-    )
-    items = [
-        TaskSummary(
-            task_id=t["task_id"],
-            plan_id=t["plan_id"],
-            agent=t["agent"],
-            description=t["description"],
-            state=t["state"],
-            attempts=int(t["attempts"] or 0),
-            last_error=t["last_error"],
-            created_at=t["created_at"],
-            updated_at=t["updated_at"],
-        )
-        for t in tasks
-    ]
-    return PlanInspectResponse(plan=plan, tasks=items)
+@app.post("/state/tasks/{task_id}/cancel")
+def cancel_task(task_id: str) -> Dict[str, bool]:
+    try:
+        task = state_store.transition_task(task_id, "cancelled")
+    except KeyError:
+        raise HTTPException(404, "task_not_found")
+    except StateTransitionError as exc:
+        raise HTTPException(400, "task_already_terminal") from exc
+    return {"ok": True}
 
 
-@app.get(
-    "/state/plans/{plan_id}/events",
-    tags=["state"],
-)
-def list_events(
-    plan_id: str,
-    task_id: Optional[str] = Query(None),
-    limit: int = Query(200, le=1000),
-) -> Dict[str, Any]:
-    q = "SELECT * FROM events WHERE plan_id = ?"
-    args: List[Any] = [plan_id]
-    if task_id:
-        q += " AND task_id = ?"
-        args.append(task_id)
-    q += " ORDER BY created_at DESC LIMIT ?"
-    args.append(limit)
-
-    with state_store._conn:
-        rows = state_store._conn.execute(q, tuple(args)).fetchall()
-
-    events = [
-        {
-            "event_id": r["event_id"],
-            "plan_id": r["plan_id"],
-            "task_id": r["task_id"],
-            "kind": r["kind"],
-            "payload": _safe_json_loads(r["payload"]),
-            "created_at": r["created_at"],
-        }
-        for r in rows
-    ]
-    return {"events": events}
+@app.post("/state/tasks/{task_id}/retry")
+def retry_task(task_id: str) -> Dict[str, bool]:
+    try:
+        task = state_store.retry_task(task_id)
+    except KeyError:
+        raise HTTPException(404, "task_not_found")
+    except StateTransitionError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    threading.Thread(target=run_plan, args=(task["plan_id"],), daemon=True).start()
+    return {"ok": True}
 
 
-@app.post("/state/tasks/{task_id}/cancel", response_model=OkResponse, tags=["state"])
-def cancel_task(task_id: str) -> OkResponse:
-    with state_store._conn:
-        t = state_store._conn.execute(
-            "SELECT * FROM tasks WHERE task_id = ?", (task_id,)).fetchone()
-        if not t:
-            raise HTTPException(status_code=404, detail="task_not_found")
-        if t["state"] in ("completed",):
-            raise HTTPException(
-                status_code=400, detail="task_already_terminal")
-        now = utc_now()
-        state_store._conn.execute(
-            "UPDATE tasks SET state = ?, updated_at = ? WHERE task_id = ?",
-            ("cancelled", now, task_id),
-        )
-        _record_event(state_store._conn, t["plan_id"], task_id, "task_cancelled", None)
-        state_store._conn.commit()
-    return OkResponse()
-
-
-@app.post("/state/tasks/{task_id}/retry", response_model=OkResponse, tags=["state"])
-def retry_task(task_id: str) -> OkResponse:
-    with state_store._conn:
-        t = state_store._conn.execute(
-            "SELECT * FROM tasks WHERE task_id = ?", (task_id,)).fetchone()
-        if not t:
-            raise HTTPException(status_code=404, detail="task_not_found")
-        if t["state"] not in ("failed", "escalated", "cancelled"):
-            raise HTTPException(
-                status_code=400, detail="retry_not_allowed_from_state")
-        attempts = int(t["attempts"] or 0) + 1
-        now = utc_now()
-        state_store._conn.execute(
-            "UPDATE tasks SET state = ?, attempts = ?, last_error = NULL, updated_at = ? WHERE task_id = ?",
-            ("pending", attempts, now, task_id),
-        )
-        _record_event(state_store._conn, t["plan_id"], task_id,
-                      "task_retry", {"attempts": attempts})
-        state_store._conn.commit()
-    return OkResponse()
-
-
-@app.get("/plan/{plan_id}/result", tags=["plan"])
+@app.get("/plan/{plan_id}/result")
 def get_plan_result(plan_id: str) -> Dict[str, Any]:
-    """Retrieve the final synthesized plan result for a completed plan."""
-    try:
-        # First check if the plan exists and is closed
-        with state_store._conn:
-            plan = state_store._conn.execute(
-                "SELECT * FROM plans WHERE plan_id = ?", (plan_id,)
-            ).fetchone()
-            
-            if not plan:
-                raise HTTPException(status_code=404, detail="plan_not_found")
-            
-            if plan["status"] not in ["closed", "synthesis_failed"]:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"plan_not_ready: current status is {plan['status']}"
-                )
-            
-            # Get the final plan from the final_plans table
-            final_plan = state_store._conn.execute(
-                "SELECT * FROM final_plans WHERE plan_id = ?", (plan_id,)
-            ).fetchone()
-            
-            if not final_plan:
-                if plan["status"] == "synthesis_failed":
-                    return {
-                        "plan_id": plan_id,
-                        "status": "synthesis_failed",
-                        "message": "Plan execution completed but synthesis failed",
-                        "plan_data": None
-                    }
-                else:
-                    raise HTTPException(
-                        status_code=404, 
-                        detail="final_plan_not_found"
-                    )
-            
-            # Parse the final plan content
-            try:
-                final_plan_data = json.loads(final_plan["content"])
-                return {
-                    "plan_id": plan_id,
-                    "status": "completed",
-                    "message": "Final plan retrieved successfully",
-                    "plan_data": final_plan_data,
-                    "created_at": final_plan["created_at"]
-                }
-            except json.JSONDecodeError:
-                raise HTTPException(
-                    status_code=500, 
-                    detail="final_plan_corrupted"
-                )
-                
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error retrieving plan result for {plan_id}: {e}")
-        raise HTTPException(status_code=500, detail="internal_server_error")
-
-
-# -------------------------------------------------------------
-# Helpers
-# -------------------------------------------------------------
-
-def _record_event(conn: sqlite3.Connection, plan_id: Optional[str], task_id: Optional[str], kind: str, payload: Optional[dict]) -> None:
-    evt = {
-        "event_id": f"evt_{uuid.uuid4().hex[:12]}",
-        "plan_id": plan_id,
-        "task_id": task_id,
-        "kind": kind,
-        "payload": json.dumps(payload) if payload is not None else None,
-        "created_at": utc_now(),
-    }
-    conn.execute(
-        """
-        INSERT INTO events(event_id, plan_id, task_id, kind, payload, created_at)
-        VALUES (:event_id, :plan_id, :task_id, :kind, :payload, :created_at)
-        """,
-        evt,
-    )
-
-
-def _safe_json_loads(s: Optional[str]) -> Any:
-    if not s:
-        return None
-    try:
-        return json.loads(s)
-    except Exception:
-        return {"raw": s}
+    plan = state_store.get_plan(plan_id)
+    if not plan:
+        raise HTTPException(404, "plan_not_found")
+    result = state_store.get_final_plan(plan_id)
+    if not result:
+        raise HTTPException(409, f"plan_not_ready: current status is {plan['status']}")
+    return {"plan_id": plan_id, "status": "completed", "plan_data": result.model_dump()}

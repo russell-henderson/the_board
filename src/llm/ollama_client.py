@@ -1,23 +1,22 @@
-# in src/llm/ollama_client.py
-import requests
+"""Small, optional client for a local Ollama server."""
+from __future__ import annotations
+
 import os
+from typing import Optional
 
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-PRIMARY_LLM = os.environ.get("PRIMARY_LLM", "llama3.2")
+import requests
 
-def generate_text(prompt: str, model: str = PRIMARY_LLM) -> str:
-    """
-    Generates text using the Ollama API.
-    """
+
+def generate_text(prompt: str) -> Optional[str]:
+    """Generate text locally, returning ``None`` when Ollama is unavailable."""
     try:
         response = requests.post(
-            f"{OLLAMA_BASE_URL}/api/generate",
-            json={"model": model, "prompt": prompt, "stream": False},
-            timeout=60 # Add a timeout
+            f"{os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')}/api/generate",
+            json={"model": os.getenv("PRIMARY_LLM", "llama3.2"), "prompt": prompt, "stream": False},
+            timeout=float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "60")),
         )
         response.raise_for_status()
-        return response.json()["response"]
-    except requests.RequestException as e:
-        # Handle errors (e.g., Ollama not running)
-        print(f"Error calling Ollama: {e}")
-        return f"Error: Could not get a response from the model. Details: {e}"
+        text = response.json().get("response", "").strip()
+        return text or None
+    except (requests.RequestException, ValueError):
+        return None

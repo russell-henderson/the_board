@@ -1,15 +1,6 @@
-import subprocess
-import sys
-from pathlib import Path
+"""Development API launcher."""
+import uvicorn
 
-def main():
-    root = Path(__file__).resolve().parents[1]
-    script = root / "dev.sh"
-    if not script.exists():
-        print("[the_board|dev] dev.sh not found at project root", file=sys.stderr)
-        sys.exit(1)
-    # Use bash to run the script so env and PATH are respected
-    try:
-        subprocess.run(["bash", str(script)], check=True)
-    except subprocess.CalledProcessError as e:
-        sys.exit(e.returncode)
+
+def main() -> None:
+    uvicorn.run("src.main:app", host="127.0.0.1", port=8000, reload=True)

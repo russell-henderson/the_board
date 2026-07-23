@@ -1,57 +1,26 @@
-# in src/orchestration/synthesizer.py
-from src.state.store import state_store
-from src.llm.ollama_client import generate_text
-from src.models.dataModel import FinalPlan # You might need more models here
+"""Odyssey synthesis with a deterministic safe fallback."""
 import json
+from typing import List
 
-def synthesize_plan(plan_id: str) -> FinalPlan:
-    """
-    Takes all completed agent responses for a plan and synthesizes them
-    into a final, cohesive strategic plan.
-    """
-    print(f"Starting synthesis for plan_id: {plan_id}")
-    
-    # 1. Fetch all completed agent responses for the plan from the StateStore
-    agent_responses = state_store.get_agent_responses_for_plan(plan_id) # You'll need to create this method in StateStore
-    original_goal = state_store.get_plan(plan_id)['original_query']
+from ..llm.ollama_client import generate_text
+from ..models.dataModel import FinalPlan
+from ..state.store import StateStore, state_store
 
-    if not agent_responses:
-        print("No agent responses to synthesize.")
-        # Handle this case appropriately
-        return None
 
-    # 2. Construct the synthesis prompt for the CEO agent
-    synthesis_prompt = f"You are Odyssey, the CEO. Your task is to synthesize the following analyses from your executive team into a single, cohesive strategic plan. The original goal was: '{original_goal}'.\n\n"
-    
-    for resp in agent_responses:
-        synthesis_prompt += f"--- ANALYSIS FROM {resp['agent']} ---\n{resp['content']}\n\n"
-        
-    synthesis_prompt += (
-        "---\n\n"
-        "Synthesize these reports into a final plan. Provide an executive summary, identify cross-functional risks, and create a list of actionable recommendations. The output should be a JSON object with the following structure:\n"
-        "{\n"
-        "  \"plan_id\": \"<plan_id>\",\n"
-        "  \"synthesized_strategy\": \"<executive summary and strategy>\",\n"
-        "  \"contributing_agents\": [\"<list of agent names>\"],\n"
-        "  \"identified_risks\": [\"<list of identified risks>\"],\n"
-        "  \"confidence_score\": <0.0-1.0>\n"
-        "}"
-    )
-
-    # 3. Call the LLM to generate the synthesized plan
-    # NOTE: You may need to ask the LLM to produce a JSON output.
-    # This can be tricky and might require a few attempts to get the prompt right.
-    final_plan_json_str = generate_text(synthesis_prompt)
-    
-    # 4. Parse the JSON and create a FinalPlan object
-    # You'll need robust error handling here in case the LLM output isn't valid JSON
+def synthesize_plan(plan_id: str, store: StateStore = state_store) -> FinalPlan:
+    plan = store.get_plan(plan_id)
+    responses = store.get_agent_responses_for_plan(plan_id)
+    if not plan or not responses:
+        raise ValueError("cannot_synthesize_without_plan_and_responses")
+    reports = "\n\n".join(f"[{response.agent_id}]\n{response.response_data.get('analysis', '')}" for response in responses)
+    prompt = ("You are Odyssey, the CEO. Return JSON only with synthesized_strategy, "
+              "contributing_agents, identified_risks, and confidence_score.\n"
+              f"Goal: {plan['original_query']}\nReports:\n{reports}")
+    raw = generate_text(prompt)
     try:
-        final_plan_data = json.loads(final_plan_json_str)
-        # Ensure plan_id is set correctly
-        final_plan_data['plan_id'] = plan_id
-        final_plan = FinalPlan(**final_plan_data)
-        return final_plan
-    except Exception as e:
-        print(f"Error parsing FinalPlan from LLM output: {e}")
-        print(f"LLM output was: {final_plan_json_str}")
-        return None
+        data = json.loads(raw or "")
+        data["plan_id"] = plan_id
+        return FinalPlan.model_validate(data)
+    except (json.JSONDecodeError, ValueError, TypeError):
+        analyses = "\n\n".join(f"### {r.agent_id} Agent\n{r.response_data.get('analysis', '')}" for r in responses)
+        return FinalPlan(plan_id=plan_id, synthesized_strategy=f"# Executive Plan\n\n## Findings\n\n{analyses}\n\n## Recommendations\n\nReview the specialist analyses, validate assumptions, and assign owners before execution.", contributing_agents=[r.agent_id for r in responses], identified_risks=["Model synthesis was unavailable; review the specialist analyses before acting."], confidence_score=min(r.confidence for r in responses))

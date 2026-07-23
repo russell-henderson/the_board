@@ -4,92 +4,31 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "the-board"
-version = "0.1.0"
-description = "Multi-agent orchestration system (FastAPI + Ollama + ChromaDB) with a SQLite-backed state layer."
+version = "0.2.0"
+description = "Local-first strategic planning with FastAPI, SQLite, and optional Ollama analysis."
 readme = "README.md"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 license = { text = "MIT" }
-authors = [{ name = "Russell Henderson", email = "you@example.com" }]
-
 dependencies = [
-  "fastapi>=0.111,<0.112",
-  "uvicorn[standard]>=0.30,<0.31",
-  "httpx>=0.27,<0.28",
-  "pydantic>=2.7,<2.8",
-  "sqlalchemy>=2.0,<2.1",
-  "aiosqlite>=0.20,<0.21",
-  "chromadb>=0.5,<0.6",
-  "openai>=1.30,<2.0",
-  "tiktoken>=0.7,<0.8",
-  "python-dotenv>=1.0,<2.0",
-  "colorlog>=6.8,<7.0",
-  "langchain>=0.2,<0.3",
-  "langchain-community>=0.2,<0.3",
-  "langchain-text-splitters>=0.2,<0.3",
-  "pypdf>=4.0,<5.0",
-  "ollama>=0.2,<0.3",
+  "fastapi>=0.111,<1.0",
+  "pydantic>=2.7,<3.0",
+  "requests>=2.31,<3.0",
   "streamlit>=1.32,<2.0",
+  "uvicorn[standard]>=0.30,<1.0",
 ]
 
 [project.optional-dependencies]
-dev = [
-  "pytest>=8.2,<8.3",
-  "black>=24.4,<25",
-  "isort>=5.13,<6",
-  "mypy>=1.10,<1.11",
-]
+dev = ["httpx>=0.27,<1.0", "pytest>=8.2,<9.0"]
 
 [project.scripts]
 dev = "scripts.dev:main"
 start = "scripts.start:main"
+ui = "scripts.ui:main"
 
 [tool.poetry]
 packages = [{ include = "src", from = "." }]
 
-[tool.poetry.scripts]
-dev = "scripts.dev:main"
-start = "scripts.start:main"
-ui = "scripts.ui:main"
-test = "tests.run_tests:main"
-
-[tool.black]
-line-length = 88
-target-version = ["py311", "py312"]
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # Directories
-  \.git
-  | \.venv
-  | build
-  | dist
-)/
-'''
-
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-line_length = 88
-
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
-
-[[tool.mypy.overrides]]
-module = ["sqlite3.*", "chromadb.*", "openai.*", "tiktoken.*"]
-ignore_missing_imports = true
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q"
